@@ -4,14 +4,16 @@ import { getIniciales } from '../utils/helpers'
 
 // Definición de rutas por rol — cada rol ve solo su menú
 const menuPorRol = {
-  coordinador: [
-    { label: 'Resumen', path: '/coordinador', icono: '▦' },
-    { label: 'Médicos', path: '/coordinador/medicos', icono: '◎' },
-    { label: 'Horarios', path: '/coordinador/horarios', icono: '◷' },
-  ],
+ 
   admision: [
     { label: 'Registrar atención', path: '/admision', icono: '+' },
   ],
+  coordinador: [
+  { label: 'Resumen', path: '/coordinador', icono: '▦' },
+  { label: 'Registrar atención', path: '/admision', icono: '+' },
+  { label: 'Médicos', path: '/coordinador/medicos', icono: '◎' },
+  { label: 'Horarios', path: '/coordinador/horarios', icono: '◷' },
+],
   director: [
     { label: 'Dashboard', path: '/director', icono: '▦' },
     { label: 'Por médico', path: '/director/medico', icono: '◎' },
