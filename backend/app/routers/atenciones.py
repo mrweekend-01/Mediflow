@@ -50,7 +50,7 @@ async def listar_atenciones_medico(
 async def endpoint_eliminar_atencion(
     atencion_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _: Usuario = Depends(require_rol("superadmin", "coordinador"))
+    _: Usuario = Depends(require_rol("superadmin", "coordinador", "admision"))
 ):
     """Elimina una atención por su ID — solo para correcciones"""
     await eliminar_atencion(atencion_id, db)
