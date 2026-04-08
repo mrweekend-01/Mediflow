@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import api from "../../services/api";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 const ResumenTriaje = () => {
   const [registros, setRegistros] = useState([]);
@@ -71,6 +73,91 @@ const ResumenTriaje = () => {
     acc[key].total += 1;
     return acc;
   }, {});
+
+  const exportarExcel = () => {
+    const wb = XLSX.utils.book_new();
+    const ws_data = [];
+
+    // Ordena los días
+    const diasOrdenados = Object.entries(registrosPorDia).sort(
+      ([a], [b]) => new Date(a) - new Date(b),
+    );
+
+    diasOrdenados.forEach(([fecha, regs]) => {
+      const fechaFormateada = new Date(fecha + "T12:00:00")
+        .toLocaleDateString("es-PE", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })
+        .toUpperCase();
+
+      // Fila de cabecera del día con fondo amarillo
+      ws_data.push([fechaFormateada]);
+
+      // Cabeceras de columnas
+      ws_data.push([
+        "N°",
+        "N° ORDEN",
+        "FECHA",
+        "N° HCL",
+        "N° BOLETA",
+        "APELLIDOS Y NOMBRES",
+        "EDAD",
+        "DNI",
+        "ESPECIALIDAD",
+        "MÉDICO",
+        "SEGURO",
+        "TURNO",
+      ]);
+
+      // Filas de pacientes
+      regs.forEach((r, i) => {
+        ws_data.push([
+          i + 1,
+          r.numero_orden,
+          r.fecha,
+          r.hcl || "",
+          r.boleta || "",
+          r.paciente_nombre || "",
+          r.paciente_edad || "",
+          r.paciente_dni || "",
+          r.especialidad_nombre || "",
+          `${r.medico_nombre || ""} ${r.medico_apellido || ""}`.trim(),
+          r.seguro || "",
+          r.turno === "mañana" ? "M" : "T",
+        ]);
+      });
+
+      // Fila vacía entre días
+      ws_data.push([]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+    // Aplica estilos — anchos de columnas
+    ws["!cols"] = [
+      { wch: 5 }, // N°
+      { wch: 8 }, // N° ORDEN
+      { wch: 12 }, // FECHA
+      { wch: 10 }, // HCL
+      { wch: 14 }, // BOLETA
+      { wch: 35 }, // NOMBRES
+      { wch: 6 }, // EDAD
+      { wch: 12 }, // DNI
+      { wch: 20 }, // ESPECIALIDAD
+      { wch: 30 }, // MÉDICO
+      { wch: 12 }, // SEGURO
+      { wch: 7 }, // TURNO
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, `${meses[mes - 1]} ${anio}`);
+
+    const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+    saveAs(blob, `Triaje_${meses[mes - 1]}_${anio}.xlsx`);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -299,6 +386,15 @@ const ResumenTriaje = () => {
                   })}
               </div>
             )}
+
+            {/* Botón exportar Excel */}
+            <button
+              onClick={exportarExcel}
+              disabled={registros.length === 0}
+              className="bg-green-600 hover:bg-green-700 text-white text-xs font-medium px-4 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+            >
+              Descargar Excel
+            </button>
 
             {/* Vista por médico */}
             {vista === "medico" && (
