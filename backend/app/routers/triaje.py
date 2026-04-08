@@ -5,6 +5,7 @@ from datetime import datetime, date
 from app.database import get_db
 from app.schemas.triaje import TriajeCreate, TriajeResponse
 from app.models.triaje import Triaje
+from app.models.atencion import Atencion
 from app.models.medico import Medico
 from app.models.especialidad import Especialidad
 from app.utils.dependencies import require_rol, get_current_user
@@ -23,14 +24,13 @@ async def registrar_triaje(
 ):
     """
     Registra un paciente en triaje en tiempo real.
-    El turno se detecta automáticamente por la hora del servidor.
-    El número de orden se calcula automáticamente reiniciando cada día.
+    También inserta en atenciones para alimentar el dashboard del director.
     """
     hora_actual = datetime.now().hour
     turno = "mañana" if hora_actual < 13 else "tarde"
     fecha_hoy = date.today()
 
-    # Calcula el número de orden del día — cuenta registros de hoy
+    # Calcula número de orden del día
     result = await db.execute(
         select(func.count(Triaje.id)).where(
             Triaje.clinica_id == current_user.clinica_id,
@@ -40,7 +40,8 @@ async def registrar_triaje(
     count_hoy = result.scalar_one()
     numero_orden = count_hoy + 1
 
-    nuevo = Triaje(
+    # Inserta en triaje con detalle completo del paciente
+    nuevo_triaje = Triaje(
         clinica_id=current_user.clinica_id,
         usuario_id=current_user.id,
         medico_id=data.medico_id,
@@ -55,9 +56,19 @@ async def registrar_triaje(
         turno=turno,
         fecha=fecha_hoy,
     )
-    db.add(nuevo)
+    db.add(nuevo_triaje)
+
+    # También inserta en atenciones para el dashboard del director
+    nueva_atencion = Atencion(
+        medico_id=data.medico_id,
+        usuario_id=current_user.id,
+        clinica_id=current_user.clinica_id,
+        turno=turno,
+    )
+    db.add(nueva_atencion)
+
     await db.flush()
-    return nuevo
+    return nuevo_triaje
 
 
 @router.get("/hoy")
@@ -76,7 +87,6 @@ async def obtener_triaje_hoy(
     )
     registros = result.scalars().all()
 
-    # Enriquece con nombres de médico y especialidad
     data = []
     for r in registros:
         medico = None
