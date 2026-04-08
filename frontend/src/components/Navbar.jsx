@@ -4,12 +4,12 @@ import { getIniciales } from "../utils/helpers";
 
 // Definición de rutas por rol — cada rol ve solo su menú
 const menuPorRol = {
-  admision: [{ label: "Registrar atención", path: "/admision", icono: "+" }],
   coordinador: [
     { label: "Resumen", path: "/coordinador", icono: "▦" },
     { label: "Registrar atención", path: "/admision", icono: "+" },
     { label: "Triaje", path: "/triaje", icono: "📋" },
     { label: "Resumen triaje", path: "/triaje/resumen", icono: "📊" },
+    { label: "Carga histórica", path: "/archivos", icono: "📂" },
     { label: "Médicos", path: "/coordinador/medicos", icono: "◎" },
     { label: "Horarios", path: "/coordinador/horarios", icono: "◷" },
   ],
@@ -18,6 +18,7 @@ const menuPorRol = {
     { label: "Triaje", path: "/triaje", icono: "📋" },
     { label: "Resumen triaje", path: "/triaje/resumen", icono: "📊" },
   ],
+  archivos: [{ label: "Carga histórica", path: "/archivos", icono: "📂" }],
   director: [
     { label: "Dashboard", path: "/director", icono: "▦" },
     { label: "Por médico", path: "/director/medico", icono: "◎" },
@@ -30,6 +31,9 @@ const menuPorRol = {
   superadmin: [
     { label: "Resumen", path: "/coordinador", icono: "▦" },
     { label: "Registrar atención", path: "/admision", icono: "+" },
+    { label: "Triaje", path: "/triaje", icono: "📋" },
+    { label: "Resumen triaje", path: "/triaje/resumen", icono: "📊" },
+    { label: "Carga histórica", path: "/archivos", icono: "📂" },
     { label: "Médicos", path: "/coordinador/medicos", icono: "◎" },
     { label: "Horarios", path: "/coordinador/horarios", icono: "◷" },
     { label: "Dashboard director", path: "/director", icono: "▦" },

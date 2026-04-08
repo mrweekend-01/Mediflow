@@ -25,6 +25,8 @@ import Exportar from "./pages/director/Exportar";
 import RegistroTriaje from "./pages/triaje/RegistroTriaje";
 import ResumenTriaje from "./pages/triaje/ResumenTriaje";
 
+import CargaHistorica from "./pages/archivos/CargaHistorica";
+
 // Pantalla de carga mientras verifica la sesión
 const LoadingScreen = () => (
   <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -129,7 +131,18 @@ const App = () => {
           </PrivateRoute>
         }
       />
-
+      <Route
+        path="/archivos"
+        element={
+          <PrivateRoute
+            rolesPermitidos={["archivos", "coordinador", "superadmin"]}
+          >
+            <Layout>
+              <CargaHistorica />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
       {/* Rutas del director */}
       <Route
         path="/director"
