@@ -22,6 +22,8 @@ import Tendencia from "./pages/director/Tendencia";
 import PorMedico from "./pages/director/PorMedico";
 import PorEspecialidad from "./pages/director/PorEspecialidad";
 import Exportar from "./pages/director/Exportar";
+import RegistroTriaje from "./pages/triaje/RegistroTriaje";
+import ResumenTriaje from "./pages/triaje/ResumenTriaje";
 
 // Pantalla de carga mientras verifica la sesión
 const LoadingScreen = () => (
@@ -52,6 +54,36 @@ const App = () => {
         element={usuario ? <Navigate to={rutaInicio} replace /> : <Login />}
       />
 
+      {/* Rutas de triaje */}
+      <Route
+        path="/triaje"
+        element={
+          <PrivateRoute
+            rolesPermitidos={["admision", "coordinador", "superadmin"]}
+          >
+            <Layout>
+              <RegistroTriaje />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/triaje/resumen"
+        element={
+          <PrivateRoute
+            rolesPermitidos={[
+              "admision",
+              "coordinador",
+              "superadmin",
+              "director",
+            ]}
+          >
+            <Layout>
+              <ResumenTriaje />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
       {/* Rutas del coordinador */}
       <Route
         path="/coordinador"

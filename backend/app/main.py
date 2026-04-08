@@ -8,9 +8,9 @@ from app.routers import (
     medicos_router,
     especialidades_router,
     atenciones_router,
-    dashboard_router
+    dashboard_router,
+    triaje_router
 )
-
 
 # Instancia principal de la aplicación FastAPI
 app = FastAPI(
@@ -21,9 +21,7 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-
-# Configuración de CORS — permite que el frontend React se conecte al backend
-# En producción reemplazar ["*"] con el dominio real del frontend
+# Configuración de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,8 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# Registro de todos los routers con sus prefijos
+# Registro de todos los routers
 app.include_router(auth_router)
 app.include_router(clinicas_router)
 app.include_router(usuarios_router)
@@ -41,9 +38,9 @@ app.include_router(medicos_router)
 app.include_router(especialidades_router)
 app.include_router(atenciones_router)
 app.include_router(dashboard_router)
+app.include_router(triaje_router)
 
 
-# Endpoint raíz para verificar que el servidor está corriendo
 @app.get("/", tags=["Root"])
 async def root():
     return {
@@ -54,7 +51,6 @@ async def root():
     }
 
 
-# Endpoint de salud para monitoreo
 @app.get("/health", tags=["Root"])
 async def health():
     return {"status": "ok"}

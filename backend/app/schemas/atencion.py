@@ -3,11 +3,20 @@ from uuid import UUID
 from datetime import datetime
 
 
-# Datos para registrar una atención
+# Schema para admisión — sin fecha manual, se genera automáticamente
 class AtencionCreate(BaseModel):
     medico_id: UUID
     clinica_id: UUID
     turno: str | None = None
+
+
+# Schema para registro histórico — con fecha manual y cantidad
+class AtencionHistoricaCreate(BaseModel):
+    medico_id: UUID
+    clinica_id: UUID
+    turno: str
+    fecha: str
+    cantidad: int
 
 
 # Respuesta completa de una atención
