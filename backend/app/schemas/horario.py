@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from uuid import UUID
 from datetime import time, date
+from typing import List
 
 
 # Datos para crear un horario
@@ -33,3 +34,15 @@ class HorarioResponse(BaseModel):
     fecha: date | None
 
     model_config = {"from_attributes": True}
+
+
+# Para carga masiva de horarios por fecha (calendario)
+class HorarioBulkItem(BaseModel):
+    fecha: date
+    turno: str
+    hora_inicio: time
+    hora_fin: time
+
+
+class HorarioBulkCreate(BaseModel):
+    items: List[HorarioBulkItem]

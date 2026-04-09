@@ -19,6 +19,15 @@ class AtencionHistoricaCreate(BaseModel):
     cantidad: int
 
 
+# Schema para ajustar cantidad de atenciones históricas existentes
+class AtencionHistoricaAjuste(BaseModel):
+    medico_id: UUID
+    clinica_id: UUID
+    turno: str
+    fecha: str          # "YYYY-MM-DD"
+    nueva_cantidad: int
+
+
 # Respuesta completa de una atención
 class AtencionResponse(BaseModel):
     id: UUID

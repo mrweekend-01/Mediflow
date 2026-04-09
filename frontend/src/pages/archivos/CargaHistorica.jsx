@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import BuscadorMedico from "../../components/BuscadorMedico";
 
 const CargaHistorica = () => {
   const { usuario } = useAuth();
@@ -17,6 +18,11 @@ const CargaHistorica = () => {
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [toast, setToast] = useState(null);
+
+  // Estado de edición inline
+  const [editando, setEditando] = useState(null); // índice de la fila que se edita
+  const [editCantidad, setEditCantidad] = useState("");
+  const [guardandoEdit, setGuardandoEdit] = useState(false);
 
   useEffect(() => {
     cargarMedicos();
@@ -39,7 +45,7 @@ const CargaHistorica = () => {
     setGuardando(true);
 
     try {
-      const res = await api.post("/atenciones/historico", {
+      await api.post("/atenciones/historico", {
         medico_id: form.medico_id,
         clinica_id: usuario.clinica_id,
         turno: form.turno,
@@ -47,24 +53,20 @@ const CargaHistorica = () => {
         cantidad: Number(form.cantidad),
       });
 
-      // Agrega el registro al historial local
       const medico = medicos.find((m) => m.id === form.medico_id);
       setRegistros((prev) => [
         {
           medico: `${medico?.nombre} ${medico?.apellido}`,
+          medico_id: form.medico_id,
+          clinica_id: usuario.clinica_id,
           turno: form.turno,
           fecha: form.fecha,
-          cantidad: form.cantidad,
+          cantidad: Number(form.cantidad),
         },
         ...prev,
       ]);
 
-      mostrarToast(
-        `${form.cantidad} atenciones registradas correctamente`,
-        "success",
-      );
-
-      // Limpia cantidad y turno pero mantiene médico y fecha
+      mostrarToast(`${form.cantidad} atenciones registradas correctamente`, "success");
       setForm((prev) => ({ ...prev, cantidad: 1 }));
     } catch (err) {
       mostrarToast("Error al registrar", "error");
@@ -73,15 +75,50 @@ const CargaHistorica = () => {
     }
   };
 
-  const mostrarToast = (mensaje, tipo) => {
-    setToast({ mensaje, tipo });
-    setTimeout(() => setToast(null), 3000);
+  const iniciarEdicion = (index) => {
+    setEditando(index);
+    setEditCantidad(String(registros[index].cantidad));
   };
 
-  const totalRegistrado = registros.reduce(
-    (sum, r) => sum + Number(r.cantidad),
-    0,
-  );
+  const cancelarEdicion = () => {
+    setEditando(null);
+    setEditCantidad("");
+  };
+
+  const guardarEdicion = async (index) => {
+    const nueva = parseInt(editCantidad);
+    if (!nueva || nueva < 1 || nueva > 200) {
+      mostrarToast("Cantidad inválida (1-200)", "error");
+      return;
+    }
+    const r = registros[index];
+    setGuardandoEdit(true);
+    try {
+      await api.patch("/atenciones/historico", {
+        medico_id: r.medico_id,
+        clinica_id: r.clinica_id,
+        turno: r.turno,
+        fecha: r.fecha,
+        nueva_cantidad: nueva,
+      });
+      setRegistros((prev) =>
+        prev.map((reg, i) => (i === index ? { ...reg, cantidad: nueva } : reg))
+      );
+      setEditando(null);
+      mostrarToast("Atenciones actualizadas correctamente", "success");
+    } catch (err) {
+      mostrarToast("Error al actualizar", "error");
+    } finally {
+      setGuardandoEdit(false);
+    }
+  };
+
+  const mostrarToast = (mensaje, tipo) => {
+    setToast({ mensaje, tipo });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const totalRegistrado = registros.reduce((sum, r) => sum + Number(r.cantidad), 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -129,21 +166,12 @@ const CargaHistorica = () => {
                 <label className="block text-xs text-gray-500 mb-1">
                   Médico <span className="text-red-500">*</span>
                 </label>
-                <select
+                <BuscadorMedico
+                  medicos={medicos}
                   value={form.medico_id}
-                  onChange={(e) =>
-                    setForm({ ...form, medico_id: e.target.value })
-                  }
-                  required
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 bg-white"
-                >
-                  <option value="">Seleccionar médico...</option>
-                  {medicos.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.nombre} {m.apellido}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(m) => setForm({ ...form, medico_id: m?.id || "" })}
+                  placeholder="Buscar médico..."
+                />
               </div>
 
               {/* Fecha */}
@@ -162,9 +190,7 @@ const CargaHistorica = () => {
 
               {/* Turno */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  Turno
-                </label>
+                <label className="block text-xs text-gray-500 mb-1">Turno</label>
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -201,9 +227,7 @@ const CargaHistorica = () => {
                   min="1"
                   max="200"
                   value={form.cantidad}
-                  onChange={(e) =>
-                    setForm({ ...form, cantidad: e.target.value })
-                  }
+                  onChange={(e) => setForm({ ...form, cantidad: e.target.value })}
                   required
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400"
                 />
@@ -212,15 +236,12 @@ const CargaHistorica = () => {
                 </div>
               </div>
 
-              {/* Botón */}
               <button
                 type="submit"
                 disabled={guardando || !form.medico_id || !form.fecha}
                 className="w-full py-2.5 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
-                {guardando
-                  ? "Registrando..."
-                  : `Registrar ${form.cantidad} atenciones`}
+                {guardando ? "Registrando..." : `Registrar ${form.cantidad} atenciones`}
               </button>
             </form>
           </div>
@@ -235,7 +256,7 @@ const CargaHistorica = () => {
               <div>2. Ingresa la fecha del registro</div>
               <div>3. Selecciona el turno (M o T)</div>
               <div>4. Ingresa la cantidad de atenciones</div>
-              <div>5. Repite por cada médico del día</div>
+              <div>5. Usa el lápiz para corregir la cantidad</div>
             </div>
           </div>
         </div>
@@ -248,7 +269,7 @@ const CargaHistorica = () => {
                 Registros de esta sesión
               </div>
               <div className="text-xs text-gray-400 mt-0.5">
-                Los registros se guardan en la BD inmediatamente
+                Usa el botón de editar para corregir la cantidad de atenciones
               </div>
             </div>
 
@@ -260,32 +281,20 @@ const CargaHistorica = () => {
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="text-left text-xs text-gray-400 font-medium px-5 py-3">
-                      Médico
-                    </th>
-                    <th className="text-left text-xs text-gray-400 font-medium px-5 py-3">
-                      Fecha
-                    </th>
-                    <th className="text-left text-xs text-gray-400 font-medium px-5 py-3">
-                      Turno
-                    </th>
-                    <th className="text-right text-xs text-gray-400 font-medium px-5 py-3">
-                      Atenciones
-                    </th>
+                    <th className="text-left text-xs text-gray-400 font-medium px-5 py-3">Médico</th>
+                    <th className="text-left text-xs text-gray-400 font-medium px-5 py-3">Fecha</th>
+                    <th className="text-left text-xs text-gray-400 font-medium px-5 py-3">Turno</th>
+                    <th className="text-right text-xs text-gray-400 font-medium px-5 py-3">Atenciones</th>
+                    <th className="text-right text-xs text-gray-400 font-medium px-5 py-3"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {registros.map((r, i) => (
-                    <tr
-                      key={i}
-                      className="border-b border-gray-50 last:border-0"
-                    >
+                    <tr key={i} className="border-b border-gray-50 last:border-0">
                       <td className="px-5 py-3 text-xs font-medium text-gray-800">
                         {r.medico}
                       </td>
-                      <td className="px-5 py-3 text-xs text-gray-600">
-                        {r.fecha}
-                      </td>
+                      <td className="px-5 py-3 text-xs text-gray-600">{r.fecha}</td>
                       <td className="px-5 py-3">
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full ${
@@ -297,22 +306,66 @@ const CargaHistorica = () => {
                           {r.turno === "mañana" ? "Mañana" : "Tarde"}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-xs font-medium text-gray-900 text-right">
-                        {r.cantidad}
+
+                      {/* Cantidad — editable inline */}
+                      <td className="px-5 py-3 text-right">
+                        {editando === i ? (
+                          <input
+                            type="number"
+                            min="1"
+                            max="200"
+                            value={editCantidad}
+                            onChange={(e) => setEditCantidad(e.target.value)}
+                            autoFocus
+                            className="w-20 px-2 py-1 text-xs border border-blue-400 rounded-lg outline-none text-right"
+                          />
+                        ) : (
+                          <span className="text-xs font-medium text-gray-900">
+                            {r.cantidad}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Acciones */}
+                      <td className="px-5 py-3 text-right">
+                        {editando === i ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => guardarEdicion(i)}
+                              disabled={guardandoEdit}
+                              className="text-xs text-white bg-blue-600 hover:bg-blue-700 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                            >
+                              {guardandoEdit ? "..." : "Guardar"}
+                            </button>
+                            <button
+                              onClick={cancelarEdicion}
+                              className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-lg border border-gray-200 transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => iniciarEdicion(i)}
+                            className="text-xs text-gray-400 hover:text-blue-600 transition-colors"
+                            title="Editar cantidad"
+                          >
+                            ✎
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
+
                   {/* Total */}
                   <tr className="bg-gray-50 border-t border-gray-200">
-                    <td
-                      colSpan={3}
-                      className="px-5 py-3 text-xs font-medium text-gray-700"
-                    >
+                    <td colSpan={3} className="px-5 py-3 text-xs font-medium text-gray-700">
                       Total cargado esta sesión
                     </td>
                     <td className="px-5 py-3 text-sm font-medium text-blue-600 text-right">
                       {totalRegistrado}
                     </td>
+                    <td />
                   </tr>
                 </tbody>
               </table>

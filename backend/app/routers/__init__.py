@@ -6,3 +6,4 @@ from app.routers.especialidades import router as especialidades_router
 from app.routers.atenciones import router as atenciones_router
 from app.routers.dashboard import router as dashboard_router
 from app.routers.triaje import router as triaje_router
+from app.routers.control_medico import router as control_medico_router

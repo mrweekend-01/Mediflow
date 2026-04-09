@@ -1,26 +1,31 @@
-// Formatea una fecha ISO a formato legible en español
+const TZ = 'America/Lima'
+
+// Formatea una fecha ISO a formato legible en español (Lima)
 // Ejemplo: "2026-04-06T14:30:00" → "6 de abril 2026"
 export const formatearFecha = (fecha) => {
   return new Date(fecha).toLocaleDateString('es-PE', {
+    timeZone: TZ,
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   })
 }
 
-// Formatea una fecha ISO a hora legible
-// Ejemplo: "2026-04-06T14:30:00" → "14:30"
+// Formatea una fecha ISO a hora legible (Lima)
+// Ejemplo: "2026-04-06T14:30:00Z" → "09:30"
 export const formatearHora = (fecha) => {
   return new Date(fecha).toLocaleTimeString('es-PE', {
+    timeZone: TZ,
     hour: '2-digit',
     minute: '2-digit',
   })
 }
 
-// Formatea fecha y hora juntas
-// Ejemplo: "2026-04-06T14:30:00" → "6 abr 2026, 14:30"
+// Formatea fecha y hora juntas (Lima)
+// Ejemplo: "2026-04-06T19:30:00Z" → "6 abr 2026, 14:30"
 export const formatearFechaHora = (fecha) => {
   return new Date(fecha).toLocaleString('es-PE', {
+    timeZone: TZ,
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -29,10 +34,26 @@ export const formatearFechaHora = (fecha) => {
   })
 }
 
-// Obtiene el turno actual según la hora del sistema
+// Retorna la fecha actual en Lima como "YYYY-MM-DD"
+export const getFechaLima = () => {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+}
+
+// Obtiene el turno actual según la hora en Lima
 // Mañana: 00:00 - 12:59 / Tarde: 13:00 - 23:59
 export const getTurnoActual = () => {
-  const hora = new Date().getHours()
+  const hora = parseInt(
+    new Intl.DateTimeFormat('es-PE', {
+      timeZone: TZ,
+      hour: 'numeric',
+      hour12: false,
+    }).format(new Date())
+  )
   return hora < 13 ? 'mañana' : 'tarde'
 }
 

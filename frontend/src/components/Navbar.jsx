@@ -6,10 +6,9 @@ import { getIniciales } from "../utils/helpers";
 const menuPorRol = {
   coordinador: [
     { label: "Resumen", path: "/coordinador", icono: "▦" },
-    { label: "Registrar atención", path: "/admision", icono: "+" },
     { label: "Triaje", path: "/triaje", icono: "📋" },
     { label: "Resumen triaje", path: "/triaje/resumen", icono: "📊" },
-    { label: "Carga histórica", path: "/archivos", icono: "📂" },
+    { label: "Control médico", path: "/control-medico", icono: "🩺" },
     { label: "Médicos", path: "/coordinador/medicos", icono: "◎" },
     { label: "Horarios", path: "/coordinador/horarios", icono: "◷" },
   ],
@@ -33,6 +32,7 @@ const menuPorRol = {
     { label: "Registrar atención", path: "/admision", icono: "+" },
     { label: "Triaje", path: "/triaje", icono: "📋" },
     { label: "Resumen triaje", path: "/triaje/resumen", icono: "📊" },
+    { label: "Control médico", path: "/control-medico", icono: "🩺" },
     { label: "Carga histórica", path: "/archivos", icono: "📂" },
     { label: "Médicos", path: "/coordinador/medicos", icono: "◎" },
     { label: "Horarios", path: "/coordinador/horarios", icono: "◷" },

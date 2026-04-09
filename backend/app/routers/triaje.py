@@ -26,9 +26,9 @@ async def registrar_triaje(
     Registra un paciente en triaje en tiempo real.
     También inserta en atenciones para alimentar el dashboard del director.
     """
-    hora_actual = datetime.now().hour
-    turno = "mañana" if hora_actual < 13 else "tarde"
-    fecha_hoy = date.today()
+    # Usa los valores enviados por el cliente (timezone America/Lima)
+    turno = data.turno or ("mañana" if datetime.now().hour < 13 else "tarde")
+    fecha_hoy = data.fecha or date.today()
 
     # Calcula número de orden del día
     result = await db.execute(

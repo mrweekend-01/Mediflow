@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func, cast, Date, delete
 from datetime import datetime
 from app.database import get_db
-from app.schemas.atencion import AtencionCreate, AtencionHistoricaCreate, AtencionResponse
+from app.schemas.atencion import AtencionCreate, AtencionHistoricaCreate, AtencionHistoricaAjuste, AtencionResponse
 from app.services import (
     registrar_atencion,
     obtener_atenciones_por_medico,
@@ -58,6 +58,62 @@ async def endpoint_registrar_historico(
     return success_response(
         {"registros_creados": registros_creados},
         f"{registros_creados} atenciones registradas correctamente"
+    )
+
+
+@router.patch("/historico")
+async def endpoint_ajustar_historico(
+    data: AtencionHistoricaAjuste,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_rol("archivos", "coordinador", "superadmin"))
+):
+    """
+    Ajusta la cantidad de atenciones históricas existentes para un médico/fecha/turno.
+    Si nueva_cantidad > actual: inserta la diferencia.
+    Si nueva_cantidad < actual: elimina el exceso.
+    """
+    from datetime import date as date_type
+    fecha_date = date_type.fromisoformat(data.fecha)
+    fecha_dt = datetime.strptime(data.fecha, "%Y-%m-%d")
+
+    # Cuenta los registros actuales que coincidan
+    count_result = await db.execute(
+        select(func.count(Atencion.id)).where(
+            Atencion.medico_id == data.medico_id,
+            Atencion.clinica_id == data.clinica_id,
+            Atencion.turno == data.turno,
+            cast(Atencion.registrado_en, Date) == fecha_date,
+        )
+    )
+    actual = count_result.scalar_one()
+
+    if data.nueva_cantidad > actual:
+        for _ in range(data.nueva_cantidad - actual):
+            db.add(Atencion(
+                medico_id=data.medico_id,
+                usuario_id=current_user.id,
+                clinica_id=data.clinica_id,
+                turno=data.turno,
+                registrado_en=fecha_dt,
+            ))
+    elif data.nueva_cantidad < actual:
+        # Elimina los más recientes primero (orden descendente de rowid)
+        ids_result = await db.execute(
+            select(Atencion.id).where(
+                Atencion.medico_id == data.medico_id,
+                Atencion.clinica_id == data.clinica_id,
+                Atencion.turno == data.turno,
+                cast(Atencion.registrado_en, Date) == fecha_date,
+            ).limit(actual - data.nueva_cantidad)
+        )
+        ids = [row[0] for row in ids_result.all()]
+        if ids:
+            await db.execute(delete(Atencion).where(Atencion.id.in_(ids)))
+
+    await db.flush()
+    return success_response(
+        {"nueva_cantidad": data.nueva_cantidad, "anterior": actual},
+        "Atenciones ajustadas correctamente"
     )
 
 

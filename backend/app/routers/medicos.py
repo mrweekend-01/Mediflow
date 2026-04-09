@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.schemas.medico import MedicoCreate, MedicoUpdate, MedicoResponse
-from app.schemas.horario import HorarioCreate, HorarioUpdate, HorarioResponse
+from app.schemas.horario import HorarioCreate, HorarioUpdate, HorarioResponse, HorarioBulkCreate
+from app.models.horario import Horario
+from sqlalchemy import select
 from app.services import (
     obtener_medicos, obtener_medico, crear_medico,
     actualizar_medico, eliminar_medico,
@@ -113,3 +115,78 @@ async def endpoint_eliminar_horario(
     """Elimina un horario por su ID"""
     await eliminar_horario(horario_id, db)
     return success_response(None, "Horario eliminado correctamente")
+
+
+@router.get("/{medico_id}/horarios/mes")
+async def listar_horarios_mes(
+    medico_id: uuid.UUID,
+    anio: int,
+    mes: int,
+    db: AsyncSession = Depends(get_db),
+    _: Usuario = Depends(require_rol("superadmin", "coordinador"))
+):
+    """Lista horarios por fecha específica de un mes — para el calendario"""
+    from sqlalchemy import func
+    result = await db.execute(
+        select(Horario)
+        .where(
+            Horario.medico_id == medico_id,
+            Horario.fecha.isnot(None),
+            func.extract('year', Horario.fecha) == anio,
+            func.extract('month', Horario.fecha) == mes
+        )
+        .order_by(Horario.fecha)
+    )
+    horarios = result.scalars().all()
+    return success_response([
+        {
+            "id": str(h.id),
+            "fecha": str(h.fecha),
+            "turno": h.turno,
+            "hora_inicio": str(h.hora_inicio),
+            "hora_fin": str(h.hora_fin),
+        }
+        for h in horarios
+    ])
+
+
+@router.post("/{medico_id}/horarios/bulk")
+async def endpoint_crear_horarios_bulk(
+    medico_id: uuid.UUID,
+    data: HorarioBulkCreate,
+    db: AsyncSession = Depends(get_db),
+    _: Usuario = Depends(require_rol("superadmin", "coordinador"))
+):
+    """Crea múltiples horarios por fecha de una vez — usado por el calendario"""
+    for item in data.items:
+        h = Horario(
+            medico_id=medico_id,
+            fecha=item.fecha,
+            turno=item.turno,
+            hora_inicio=item.hora_inicio,
+            hora_fin=item.hora_fin,
+        )
+        db.add(h)
+    await db.flush()
+    return success_response({"creados": len(data.items)}, f"{len(data.items)} horarios creados")
+
+
+@router.delete("/{medico_id}/horarios/fecha/{fecha}")
+async def endpoint_eliminar_horarios_fecha(
+    medico_id: uuid.UUID,
+    fecha: str,
+    db: AsyncSession = Depends(get_db),
+    _: Usuario = Depends(require_rol("superadmin", "coordinador"))
+):
+    """Elimina todos los horarios de un médico en una fecha específica"""
+    from datetime import date as date_type
+    from sqlalchemy import delete
+    fecha_date = date_type.fromisoformat(fecha)
+    await db.execute(
+        delete(Horario).where(
+            Horario.medico_id == medico_id,
+            Horario.fecha == fecha_date
+        )
+    )
+    await db.flush()
+    return success_response(None, "Horarios de esa fecha eliminados")

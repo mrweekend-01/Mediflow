@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
+import * as XLSX from "xlsx";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { getTurnoActual, getFechaLima } from "../../utils/helpers";
 import BuscadorMedico from "../../components/BuscadorMedico";
 
-const RegistroTriaje = () => {
+const ControlMedico = () => {
   const { usuario } = useAuth();
 
   const [medicos, setMedicos] = useState([]);
@@ -24,11 +25,12 @@ const RegistroTriaje = () => {
   const [guardando, setGuardando] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // Turno y fecha en Lima — se envían al backend
-  const turnoActual = getTurnoActual();
-  const fechaLima = getFechaLima();
+  // Exportar Excel — mes/año seleccionado
+  const hoyLima = getFechaLima();
+  const [excelMes, setExcelMes] = useState(hoyLima.slice(0, 7)); // "YYYY-MM"
+  const [exportando, setExportando] = useState(false);
 
-  // Fecha de hoy formateada para mostrar
+  const turnoActual = getTurnoActual();
   const hoy = new Date().toLocaleDateString("es-PE", {
     timeZone: "America/Lima",
     weekday: "long",
@@ -45,7 +47,7 @@ const RegistroTriaje = () => {
     try {
       const [resMedicos, resHoy] = await Promise.all([
         api.get("/medicos/"),
-        api.get("/triaje/hoy"),
+        api.get("/control-medico/hoy"),
       ]);
       setMedicos(resMedicos.data);
       setRegistrosHoy(resHoy.data.data || []);
@@ -56,7 +58,6 @@ const RegistroTriaje = () => {
     }
   };
 
-  // Al seleccionar médico rellena especialidad automáticamente
   const handleMedicoChange = (medico) => {
     setForm((prev) => ({
       ...prev,
@@ -69,9 +70,8 @@ const RegistroTriaje = () => {
     e.preventDefault();
     if (!form.medico_id) return;
     setGuardando(true);
-
     try {
-      await api.post("/triaje/", {
+      await api.post("/control-medico/", {
         medico_id: form.medico_id,
         especialidad_id: form.especialidad_id || null,
         hcl: form.hcl || null,
@@ -81,10 +81,8 @@ const RegistroTriaje = () => {
         paciente_dni: form.paciente_dni || null,
         seguro: form.seguro || null,
         turno: turnoActual,
-        fecha: fechaLima,
+        fecha: hoyLima,
       });
-
-      // Limpia el formulario manteniendo solo el médico
       setForm((prev) => ({
         ...prev,
         hcl: "",
@@ -94,8 +92,7 @@ const RegistroTriaje = () => {
         paciente_dni: "",
         seguro: "",
       }));
-
-      mostrarToast("Paciente registrado correctamente", "success");
+      mostrarToast("Paciente registrado en control médico", "success");
       cargarDatos();
     } catch (err) {
       mostrarToast("Error al registrar", "error");
@@ -107,11 +104,86 @@ const RegistroTriaje = () => {
   const eliminarRegistro = async (id) => {
     if (!confirm("¿Eliminar este registro?")) return;
     try {
-      await api.delete(`/triaje/${id}`);
+      await api.delete(`/control-medico/${id}`);
       mostrarToast("Registro eliminado", "success");
       cargarDatos();
     } catch (err) {
       mostrarToast("Error al eliminar", "error");
+    }
+  };
+
+  const exportarExcel = async () => {
+    setExportando(true);
+    try {
+      const [anio, mes] = excelMes.split("-").map(Number);
+      const res = await api.get(`/control-medico/mes?anio=${anio}&mes=${mes}`);
+      const registros = res.data.data || [];
+
+      if (registros.length === 0) {
+        mostrarToast("Sin registros en ese mes", "error");
+        return;
+      }
+
+      // Agrupa por día
+      const porDia = {};
+      registros.forEach((r) => {
+        if (!porDia[r.fecha]) porDia[r.fecha] = [];
+        porDia[r.fecha].push(r);
+      });
+
+      const wb = XLSX.utils.book_new();
+
+      // Hoja resumen
+      const resumenData = [
+        ["Fecha", "Médico", "Especialidad", "Turno", "Paciente", "HCL", "Boleta", "DNI", "Seguro"],
+      ];
+      registros.forEach((r) => {
+        resumenData.push([
+          r.fecha,
+          `${r.medico_nombre || ""} ${r.medico_apellido || ""}`.trim(),
+          r.especialidad_nombre || "",
+          r.turno || "",
+          r.paciente_nombre || "",
+          r.hcl || "",
+          r.boleta || "",
+          r.paciente_dni || "",
+          r.seguro || "",
+        ]);
+      });
+      const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+      XLSX.utils.book_append_sheet(wb, wsResumen, "Control médico");
+
+      // Una hoja por día
+      Object.entries(porDia)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .forEach(([fecha, filas]) => {
+          const diaData = [
+            ["N°", "HCL", "Boleta", "Paciente", "Edad", "DNI", "Especialidad", "Médico", "Seguro", "Turno"],
+          ];
+          filas.forEach((r) => {
+            diaData.push([
+              r.numero_orden,
+              r.hcl || "",
+              r.boleta || "",
+              r.paciente_nombre || "",
+              r.paciente_edad || "",
+              r.paciente_dni || "",
+              r.especialidad_nombre || "",
+              `${r.medico_nombre || ""} ${r.medico_apellido || ""}`.trim(),
+              r.seguro || "",
+              r.turno || "",
+            ]);
+          });
+          const ws = XLSX.utils.aoa_to_sheet(diaData);
+          XLSX.utils.book_append_sheet(wb, ws, fecha);
+        });
+
+      XLSX.writeFile(wb, `control-medico-${excelMes}.xlsx`);
+      mostrarToast("Excel generado correctamente", "success");
+    } catch (err) {
+      mostrarToast("Error al exportar", "error");
+    } finally {
+      setExportando(false);
     }
   };
 
@@ -138,7 +210,7 @@ const RegistroTriaje = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-medium text-gray-900 capitalize">
-              Registro de triaje
+              Control médico
             </h1>
             <p className="text-sm text-gray-500 mt-0.5 capitalize">{hoy}</p>
           </div>
@@ -153,7 +225,23 @@ const RegistroTriaje = () => {
               Turno: {turnoActual === "mañana" ? "Mañana" : "Tarde"}
             </div>
             <div className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-full font-medium">
-              {registrosHoy.length} pacientes hoy
+              {registrosHoy.length} registros hoy
+            </div>
+            {/* Exportar Excel */}
+            <div className="flex items-center gap-2">
+              <input
+                type="month"
+                value={excelMes}
+                onChange={(e) => setExcelMes(e.target.value)}
+                className="text-xs px-2 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-blue-400"
+              />
+              <button
+                onClick={exportarExcel}
+                disabled={exportando}
+                className="text-xs px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                {exportando ? "Exportando..." : "↓ Excel"}
+              </button>
             </div>
           </div>
         </div>
@@ -164,11 +252,11 @@ const RegistroTriaje = () => {
         <div className="w-96 flex-shrink-0">
           <div className="bg-white border border-gray-200 rounded-2xl p-5">
             <div className="text-sm font-medium text-gray-900 mb-4">
-              Nuevo paciente
+              Nuevo registro
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3">
-              {/* Médico — buscador en tiempo real */}
+              {/* Médico */}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
                   Médico <span className="text-red-500">*</span>
@@ -183,9 +271,7 @@ const RegistroTriaje = () => {
 
               {/* N° HCL */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  N° HCL
-                </label>
+                <label className="block text-xs text-gray-500 mb-1">N° HCL</label>
                 <input
                   type="text"
                   value={form.hcl}
@@ -197,9 +283,7 @@ const RegistroTriaje = () => {
 
               {/* N° Boleta */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  N° Boleta
-                </label>
+                <label className="block text-xs text-gray-500 mb-1">N° Boleta</label>
                 <input
                   type="text"
                   value={form.boleta}
@@ -209,7 +293,7 @@ const RegistroTriaje = () => {
                 />
               </div>
 
-              {/* Apellidos y Nombres */}
+              {/* Paciente */}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
                   Apellidos y Nombres
@@ -217,41 +301,31 @@ const RegistroTriaje = () => {
                 <input
                   type="text"
                   value={form.paciente_nombre}
-                  onChange={(e) =>
-                    setForm({ ...form, paciente_nombre: e.target.value })
-                  }
+                  onChange={(e) => setForm({ ...form, paciente_nombre: e.target.value })}
                   placeholder="Ej: GARCIA LOPEZ JUAN"
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400"
                 />
               </div>
 
-              {/* Edad y DNI en fila */}
+              {/* Edad y DNI */}
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <label className="block text-xs text-gray-500 mb-1">
-                    Edad
-                  </label>
+                  <label className="block text-xs text-gray-500 mb-1">Edad</label>
                   <input
                     type="text"
                     value={form.paciente_edad}
-                    onChange={(e) =>
-                      setForm({ ...form, paciente_edad: e.target.value })
-                    }
-                    placeholder="Ej: 45"
+                    onChange={(e) => setForm({ ...form, paciente_edad: e.target.value })}
+                    placeholder="45"
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400"
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="block text-xs text-gray-500 mb-1">
-                    DNI
-                  </label>
+                  <label className="block text-xs text-gray-500 mb-1">DNI</label>
                   <input
                     type="text"
                     value={form.paciente_dni}
-                    onChange={(e) =>
-                      setForm({ ...form, paciente_dni: e.target.value })
-                    }
-                    placeholder="Ej: 12345678"
+                    onChange={(e) => setForm({ ...form, paciente_dni: e.target.value })}
+                    placeholder="12345678"
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400"
                   />
                 </div>
@@ -259,19 +333,16 @@ const RegistroTriaje = () => {
 
               {/* Seguro */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  Seguro
-                </label>
+                <label className="block text-xs text-gray-500 mb-1">Seguro</label>
                 <input
                   type="text"
                   value={form.seguro}
                   onChange={(e) => setForm({ ...form, seguro: e.target.value })}
-                  placeholder="Ej: PACIFICO, SIS, etc."
+                  placeholder="Ej: PACIFICO, SIS"
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400"
                 />
               </div>
 
-              {/* Botón registrar */}
               <button
                 type="submit"
                 disabled={guardando || !form.medico_id}
@@ -283,13 +354,11 @@ const RegistroTriaje = () => {
           </div>
         </div>
 
-        {/* Tabla de registros del día */}
+        {/* Tabla del día */}
         <div className="flex-1 min-w-0">
           <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <div className="text-sm font-medium text-gray-900">
-                Registros de hoy
-              </div>
+              <div className="text-sm font-medium text-gray-900">Registros de hoy</div>
               <button
                 onClick={cargarDatos}
                 className="text-xs text-gray-500 hover:text-blue-600 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-lg transition-colors"
@@ -302,91 +371,40 @@ const RegistroTriaje = () => {
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="text-left text-xs text-gray-400 font-medium px-4 py-2.5">
-                      N°
-                    </th>
-                    <th className="text-left text-xs text-gray-400 font-medium px-4 py-2.5">
-                      HCL
-                    </th>
-                    <th className="text-left text-xs text-gray-400 font-medium px-4 py-2.5">
-                      Boleta
-                    </th>
-                    <th className="text-left text-xs text-gray-400 font-medium px-4 py-2.5">
-                      Paciente
-                    </th>
-                    <th className="text-left text-xs text-gray-400 font-medium px-4 py-2.5">
-                      Edad
-                    </th>
-                    <th className="text-left text-xs text-gray-400 font-medium px-4 py-2.5">
-                      DNI
-                    </th>
-                    <th className="text-left text-xs text-gray-400 font-medium px-4 py-2.5">
-                      Especialidad
-                    </th>
-                    <th className="text-left text-xs text-gray-400 font-medium px-4 py-2.5">
-                      Médico
-                    </th>
-                    <th className="text-left text-xs text-gray-400 font-medium px-4 py-2.5">
-                      Seguro
-                    </th>
-                    <th className="text-left text-xs text-gray-400 font-medium px-4 py-2.5">
-                      Turno
-                    </th>
-                    <th className="text-left text-xs text-gray-400 font-medium px-4 py-2.5"></th>
+                    {["N°", "HCL", "Boleta", "Paciente", "Edad", "DNI", "Especialidad", "Médico", "Seguro", "Turno", ""].map((h) => (
+                      <th key={h} className="text-left text-xs text-gray-400 font-medium px-4 py-2.5">
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {cargando ? (
                     <tr>
-                      <td
-                        colSpan={11}
-                        className="text-center py-8 text-xs text-gray-400"
-                      >
+                      <td colSpan={11} className="text-center py-8 text-xs text-gray-400">
                         Cargando...
                       </td>
                     </tr>
                   ) : registrosHoy.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={11}
-                        className="text-center py-8 text-xs text-gray-400"
-                      >
+                      <td colSpan={11} className="text-center py-8 text-xs text-gray-400">
                         No hay registros hoy
                       </td>
                     </tr>
                   ) : (
                     registrosHoy.map((r) => (
-                      <tr
-                        key={r.id}
-                        className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
-                      >
-                        <td className="px-4 py-2.5 text-xs font-medium text-gray-700">
-                          {r.numero_orden}
-                        </td>
-                        <td className="px-4 py-2.5 text-xs text-gray-600">
-                          {r.hcl || "—"}
-                        </td>
-                        <td className="px-4 py-2.5 text-xs text-gray-600">
-                          {r.boleta || "—"}
-                        </td>
-                        <td className="px-4 py-2.5 text-xs font-medium text-gray-800">
-                          {r.paciente_nombre || "—"}
-                        </td>
-                        <td className="px-4 py-2.5 text-xs text-gray-600">
-                          {r.paciente_edad || "—"}
-                        </td>
-                        <td className="px-4 py-2.5 text-xs text-gray-600">
-                          {r.paciente_dni || "—"}
-                        </td>
-                        <td className="px-4 py-2.5 text-xs text-gray-600">
-                          {r.especialidad_nombre || "—"}
-                        </td>
+                      <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-2.5 text-xs font-medium text-gray-700">{r.numero_orden}</td>
+                        <td className="px-4 py-2.5 text-xs text-gray-600">{r.hcl || "—"}</td>
+                        <td className="px-4 py-2.5 text-xs text-gray-600">{r.boleta || "—"}</td>
+                        <td className="px-4 py-2.5 text-xs font-medium text-gray-800">{r.paciente_nombre || "—"}</td>
+                        <td className="px-4 py-2.5 text-xs text-gray-600">{r.paciente_edad || "—"}</td>
+                        <td className="px-4 py-2.5 text-xs text-gray-600">{r.paciente_dni || "—"}</td>
+                        <td className="px-4 py-2.5 text-xs text-gray-600">{r.especialidad_nombre || "—"}</td>
                         <td className="px-4 py-2.5 text-xs text-gray-600">
                           {r.medico_nombre} {r.medico_apellido}
                         </td>
-                        <td className="px-4 py-2.5 text-xs text-gray-600">
-                          {r.seguro || "—"}
-                        </td>
+                        <td className="px-4 py-2.5 text-xs text-gray-600">{r.seguro || "—"}</td>
                         <td className="px-4 py-2.5">
                           <span
                             className={`text-xs px-2 py-0.5 rounded-full ${
@@ -419,4 +437,4 @@ const RegistroTriaje = () => {
   );
 };
 
-export default RegistroTriaje;
+export default ControlMedico;

@@ -10,6 +10,7 @@ import Login from "./pages/auth/Login";
 import CoordinadorDashboard from "./pages/coordinador/Dashboard";
 import Medicos from "./pages/coordinador/Medicos";
 import Horarios from "./pages/coordinador/Horarios";
+import ControlMedico from "./pages/coordinador/ControlMedico";
 
 // Páginas admisión
 import RegistrarAtencion from "./pages/admision/RegistrarAtencion";
@@ -86,6 +87,18 @@ const App = () => {
           </PrivateRoute>
         }
       />
+      {/* Control médico */}
+      <Route
+        path="/control-medico"
+        element={
+          <PrivateRoute rolesPermitidos={["coordinador", "superadmin"]}>
+            <Layout>
+              <ControlMedico />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+
       {/* Rutas del coordinador */}
       <Route
         path="/coordinador"
