@@ -24,7 +24,6 @@ async def listar_medicos(
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
-    """Lista todos los médicos activos de la clínica del usuario autenticado"""
     return await obtener_medicos(current_user.clinica_id, db)
 
 
@@ -34,7 +33,6 @@ async def detalle_medico(
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(get_current_user)
 ):
-    """Retorna el detalle de un médico por su ID"""
     return await obtener_medico(medico_id, db)
 
 
@@ -44,7 +42,6 @@ async def endpoint_crear_medico(
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(require_rol("superadmin", "coordinador"))
 ):
-    """Crea un nuevo médico — solo superadmin y coordinador"""
     medico = await crear_medico(data, db)
     return created_response({"id": str(medico.id), "nombre": medico.nombre})
 
@@ -56,7 +53,6 @@ async def endpoint_actualizar_medico(
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(require_rol("superadmin", "coordinador"))
 ):
-    """Actualiza los datos de un médico existente"""
     medico = await actualizar_medico(medico_id, data, db)
     return success_response({"id": str(medico.id), "nombre": medico.nombre})
 
@@ -67,7 +63,6 @@ async def endpoint_eliminar_medico(
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(require_rol("superadmin", "coordinador"))
 ):
-    """Desactiva un médico (soft delete)"""
     await eliminar_medico(medico_id, db)
     return success_response(None, "Médico desactivado correctamente")
 
@@ -78,7 +73,6 @@ async def listar_horarios(
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(get_current_user)
 ):
-    """Lista todos los horarios de un médico"""
     return await obtener_horarios(medico_id, db)
 
 
@@ -89,7 +83,6 @@ async def endpoint_crear_horario(
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(require_rol("superadmin", "coordinador"))
 ):
-    """Crea un nuevo horario para un médico"""
     horario = await crear_horario(data, db)
     return created_response({"id": str(horario.id)})
 
@@ -101,7 +94,6 @@ async def endpoint_actualizar_horario(
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(require_rol("superadmin", "coordinador"))
 ):
-    """Actualiza un horario existente"""
     horario = await actualizar_horario(horario_id, data, db)
     return success_response({"id": str(horario.id)})
 
@@ -112,7 +104,6 @@ async def endpoint_eliminar_horario(
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(require_rol("superadmin", "coordinador"))
 ):
-    """Elimina un horario por su ID"""
     await eliminar_horario(horario_id, db)
     return success_response(None, "Horario eliminado correctamente")
 
@@ -125,7 +116,6 @@ async def listar_horarios_mes(
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(require_rol("superadmin", "coordinador"))
 ):
-    """Lista horarios por fecha específica de un mes — para el calendario"""
     from sqlalchemy import func
     result = await db.execute(
         select(Horario)
@@ -157,7 +147,6 @@ async def endpoint_crear_horarios_bulk(
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(require_rol("superadmin", "coordinador"))
 ):
-    """Crea múltiples horarios por fecha de una vez — usado por el calendario"""
     for item in data.items:
         h = Horario(
             medico_id=medico_id,
@@ -178,7 +167,6 @@ async def endpoint_eliminar_horarios_fecha(
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(require_rol("superadmin", "coordinador"))
 ):
-    """Elimina todos los horarios de un médico en una fecha específica"""
     from datetime import date as date_type
     from sqlalchemy import delete
     fecha_date = date_type.fromisoformat(fecha)

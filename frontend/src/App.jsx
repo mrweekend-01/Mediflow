@@ -27,7 +27,7 @@ import RegistroTriaje from "./pages/triaje/RegistroTriaje";
 import ResumenTriaje from "./pages/triaje/ResumenTriaje";
 
 import CargaHistorica from "./pages/archivos/CargaHistorica";
-
+import ResumenControlMedico from "./pages/control-medico/ResumenControlMedico";
 // Pantalla de carga mientras verifica la sesión
 const LoadingScreen = () => (
   <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -116,6 +116,16 @@ const App = () => {
           <PrivateRoute rolesPermitidos={["coordinador", "superadmin"]}>
             <Layout>
               <Medicos />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/control-medico/resumen"
+        element={
+          <PrivateRoute rolesPermitidos={["coordinador", "superadmin"]}>
+            <Layout>
+              <ResumenControlMedico />
             </Layout>
           </PrivateRoute>
         }
