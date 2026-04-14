@@ -1,9 +1,9 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime, timezone, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import select, func
+from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.auditoria import Auditoria
@@ -36,17 +36,28 @@ class AuditoriaListResponse(BaseModel):
 async def listar_auditoria(
     pagina: int = Query(default=1, ge=1),
     por_pagina: int = Query(default=50, ge=1, le=200),
+    fecha_desde: Optional[date] = Query(default=None),
+    fecha_hasta: Optional[date] = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _: Usuario = Depends(require_rol("superadmin")),
 ):
-    """Lista todos los registros de auditoría — solo superadmin."""
+    """Lista registros de auditoría con filtro de fechas — solo superadmin."""
     offset = (pagina - 1) * por_pagina
 
-    total_result = await db.execute(select(func.count()).select_from(Auditoria))
+    filtros = []
+    if fecha_desde:
+        filtros.append(Auditoria.fecha >= datetime(fecha_desde.year, fecha_desde.month, fecha_desde.day, tzinfo=timezone.utc))
+    if fecha_hasta:
+        fin = datetime(fecha_hasta.year, fecha_hasta.month, fecha_hasta.day, tzinfo=timezone.utc) + timedelta(days=1)
+        filtros.append(Auditoria.fecha < fin)
+
+    condicion = and_(*filtros) if filtros else True
+
+    total_result = await db.execute(select(func.count()).select_from(Auditoria).where(condicion))
     total = total_result.scalar_one()
 
     result = await db.execute(
-        select(Auditoria).order_by(Auditoria.fecha.desc()).offset(offset).limit(por_pagina)
+        select(Auditoria).where(condicion).order_by(Auditoria.fecha.desc()).offset(offset).limit(por_pagina)
     )
     registros = result.scalars().all()
 
