@@ -1,13 +1,14 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.usuario import Usuario
+from app.models.auditoria import Auditoria
 from app.core.security import verify_password, create_access_token, hash_password
 from app.schemas.auth import LoginRequest, TokenResponse
 from app.schemas.usuario import UsuarioCreate
 from fastapi import HTTPException, status
 
 
-async def login(data: LoginRequest, db: AsyncSession) -> TokenResponse:
+async def login(data: LoginRequest, db: AsyncSession, ip: str | None = None) -> TokenResponse:
     """Valida credenciales y retorna un token JWT si son correctas"""
 
     # Busca el usuario por email
@@ -33,6 +34,15 @@ async def login(data: LoginRequest, db: AsyncSession) -> TokenResponse:
         "rol": usuario.rol,
         "clinica_id": str(usuario.clinica_id)
     })
+
+    # Registra el login exitoso en auditoría
+    db.add(Auditoria(
+        usuario_id=usuario.id,
+        usuario_email=usuario.email,
+        usuario_nombre=usuario.nombre,
+        accion="LOGIN",
+        ip=ip,
+    ))
 
     return TokenResponse(
         access_token=token,
