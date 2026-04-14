@@ -62,6 +62,7 @@ const Rendimiento = () => {
   });
   const [fechaFin, setFechaFin] = useState(hoyLima);
   const [granularidad, setGranularidad] = useState("dia"); // "dia" | "mes"
+  const [filtroVista, setFiltroVista] = useState("ambos"); // "ambos" | "atenciones" | "horas"
   const [mesSeleccionado, setMesSeleccionado] = useState(() =>
     parseInt(hoyLima.slice(5, 7)),
   );
@@ -442,6 +443,23 @@ const Rendimiento = () => {
             ))}
           </div>
 
+          {/* Vista del gráfico de tendencia */}
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+            {[
+              { label: "Ambos", v: "ambos" },
+              { label: "Atenciones", v: "atenciones" },
+              { label: "Horas", v: "horas" },
+            ].map((o) => (
+              <button
+                key={o.v}
+                onClick={() => setFiltroVista(o.v)}
+                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${filtroVista === o.v ? "bg-purple-600 text-white" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+
           {/* Granularidad Excel */}
           <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
             {[
@@ -572,22 +590,26 @@ const Rendimiento = () => {
                     }}
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar
-                    dataKey="Horas prog."
-                    fill="#1D9E75"
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="Atenciones"
-                    fill="#378ADD"
-                    radius={[4, 4, 0, 0]}
-                  />
+                  {filtroVista !== "atenciones" && (
+                    <Bar
+                      dataKey="Horas prog."
+                      fill="#1D9E75"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  )}
+                  {filtroVista !== "horas" && (
+                    <Bar
+                      dataKey="Atenciones"
+                      fill="#378ADD"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  )}
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
             {/* ── Gráfico de líneas: tendencia diaria ─────────── */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-5">
+            {filtroVista !== "horas" && <div className="bg-white border border-gray-200 rounded-2xl p-5">
               <div className="text-sm font-medium text-gray-900 mb-1">
                 Tendencia diaria de atenciones por médico
               </div>
@@ -654,7 +676,7 @@ const Rendimiento = () => {
                   ))}
                 </LineChart>
               </ResponsiveContainer>
-            </div>
+            </div>}
 
             {/* ── Tabla detallada ──────────────────────────────── */}
             <div className="bg-white border border-gray-200 rounded-2xl p-5">
