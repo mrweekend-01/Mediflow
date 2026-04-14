@@ -55,6 +55,7 @@ async def registrar_triaje(
         seguro=data.seguro,
         turno=turno,
         fecha=fecha_hoy,
+        campana=data.campana,
     )
     db.add(nuevo_triaje)
 
@@ -111,6 +112,7 @@ async def obtener_triaje_hoy(
             "medico_apellido": medico.apellido if medico else None,
             "especialidad_nombre": especialidad.nombre if especialidad else None,
             "turno": r.turno,
+            "campana": r.campana,
             "fecha": str(r.fecha),
             "registrado_en": str(r.registrado_en),
         })
@@ -161,6 +163,7 @@ async def obtener_triaje_mes(
             "medico_apellido": medico.apellido if medico else None,
             "especialidad_nombre": especialidad.nombre if especialidad else None,
             "turno": r.turno,
+            "campana": r.campana,
             "fecha": str(r.fecha),
             "registrado_en": str(r.registrado_en),
         })

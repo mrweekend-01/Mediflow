@@ -109,6 +109,7 @@ const ResumenTriaje = () => {
         "ESPECIALIDAD",
         "MÉDICO",
         "SEGURO",
+        "CAMPAÑA",
         "TURNO",
       ]);
 
@@ -126,6 +127,7 @@ const ResumenTriaje = () => {
           r.especialidad_nombre || "",
           `${r.medico_nombre || ""} ${r.medico_apellido || ""}`.trim(),
           r.seguro || "",
+          r.campana || "",
           r.turno === "mañana" ? "M" : "T",
         ]);
       });
@@ -149,6 +151,7 @@ const ResumenTriaje = () => {
       { wch: 20 }, // ESPECIALIDAD
       { wch: 30 }, // MÉDICO
       { wch: 12 }, // SEGURO
+      { wch: 25 }, // CAMPAÑA
       { wch: 7 }, // TURNO
     ];
 
@@ -328,6 +331,9 @@ const ResumenTriaje = () => {
                                   Seguro
                                 </th>
                                 <th className="text-left text-xs text-gray-400 font-medium px-4 py-2">
+                                  Campaña
+                                </th>
+                                <th className="text-left text-xs text-gray-400 font-medium px-4 py-2">
                                   Turno
                                 </th>
                               </tr>
@@ -364,6 +370,9 @@ const ResumenTriaje = () => {
                                   </td>
                                   <td className="px-4 py-2 text-xs text-gray-600">
                                     {r.seguro || "—"}
+                                  </td>
+                                  <td className="px-4 py-2 text-xs text-gray-600">
+                                    {r.campana || "—"}
                                   </td>
                                   <td className="px-4 py-2">
                                     <span

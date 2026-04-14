@@ -17,6 +17,7 @@ const RegistroTriaje = () => {
     paciente_edad: "",
     paciente_dni: "",
     seguro: "",
+    campana: "",
   });
 
   const [registrosHoy, setRegistrosHoy] = useState([]);
@@ -80,6 +81,7 @@ const RegistroTriaje = () => {
         paciente_edad: form.paciente_edad || null,
         paciente_dni: form.paciente_dni || null,
         seguro: form.seguro || null,
+        campana: form.campana || null,
         turno: turnoActual,
         fecha: fechaLima,
       });
@@ -93,6 +95,7 @@ const RegistroTriaje = () => {
         paciente_edad: "",
         paciente_dni: "",
         seguro: "",
+        campana: "",
       }));
 
       mostrarToast("Paciente registrado correctamente", "success");
@@ -271,6 +274,22 @@ const RegistroTriaje = () => {
                 />
               </div>
 
+              {/* Campaña */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Campaña
+                </label>
+                <input
+                  type="text"
+                  value={form.campana}
+                  onChange={(e) =>
+                    setForm({ ...form, campana: e.target.value })
+                  }
+                  placeholder="Ej: Campaña Adulto Mayor"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400"
+                />
+              </div>
+
               {/* Botón registrar */}
               <button
                 type="submit"
@@ -330,6 +349,9 @@ const RegistroTriaje = () => {
                       Seguro
                     </th>
                     <th className="text-left text-xs text-gray-400 font-medium px-4 py-2.5">
+                      Campaña
+                    </th>
+                    <th className="text-left text-xs text-gray-400 font-medium px-4 py-2.5">
                       Turno
                     </th>
                     <th className="text-left text-xs text-gray-400 font-medium px-4 py-2.5"></th>
@@ -339,7 +361,7 @@ const RegistroTriaje = () => {
                   {cargando ? (
                     <tr>
                       <td
-                        colSpan={11}
+                        colSpan={12}
                         className="text-center py-8 text-xs text-gray-400"
                       >
                         Cargando...
@@ -348,7 +370,7 @@ const RegistroTriaje = () => {
                   ) : registrosHoy.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={11}
+                        colSpan={12}
                         className="text-center py-8 text-xs text-gray-400"
                       >
                         No hay registros hoy
@@ -386,6 +408,9 @@ const RegistroTriaje = () => {
                         </td>
                         <td className="px-4 py-2.5 text-xs text-gray-600">
                           {r.seguro || "—"}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs text-gray-600">
+                          {r.campana || "—"}
                         </td>
                         <td className="px-4 py-2.5">
                           <span

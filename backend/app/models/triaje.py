@@ -43,7 +43,7 @@ class Triaje(Base):
     paciente_edad: Mapped[str | None] = mapped_column(String(10), nullable=True)
     paciente_dni: Mapped[str | None] = mapped_column(String(20), nullable=True)
     seguro: Mapped[str | None] = mapped_column(String(100), nullable=True)
-
+    campana: Mapped[str | None] = mapped_column(String(100), nullable=True)
     # Turno detectado automáticamente por hora del servidor
     turno: Mapped[str | None] = mapped_column(String(10), nullable=True)
 

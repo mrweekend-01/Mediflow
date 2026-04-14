@@ -16,6 +16,7 @@ class TriajeCreate(BaseModel):
     seguro: str | None = None
     turno: str | None = None   # enviado por el cliente (America/Lima)
     fecha: date | None = None  # enviado por el cliente (America/Lima)
+    campana: str | None = None
 
 
 # Respuesta completa de un registro de triaje
@@ -33,6 +34,7 @@ class TriajeResponse(BaseModel):
     paciente_dni: str | None
     seguro: str | None
     turno: str | None
+    campana: str | None = None
     fecha: date
     registrado_en: datetime
 
