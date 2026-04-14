@@ -1,6 +1,12 @@
-from fastapi import FastAPI
+import logging
+import time
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from app.core.config import settings
+
+logger = logging.getLogger("mediflow.access")
+
 from app.routers import (
     auth_router,
     clinicas_router,
@@ -22,6 +28,9 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+# Hosts de confianza (permite cualquier host; ajustar en producción si se desea restringir)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
+
 # Configuración de CORS
 app.add_middleware(
     CORSMiddleware,
@@ -30,6 +39,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_real_ip(request: Request, call_next):
+    real_ip = (
+        request.headers.get("X-Real-IP")
+        or request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+        or request.client.host
+    )
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed = (time.perf_counter() - start) * 1000
+    logger.info(
+        '%s "%s %s" %s %.0fms',
+        real_ip,
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed,
+    )
+    return response
 
 # Registro de todos los routers
 app.include_router(auth_router)
