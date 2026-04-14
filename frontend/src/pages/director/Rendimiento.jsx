@@ -2,15 +2,35 @@ import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
-import { getFechaLima, getIniciales, calcularRatioHora, getEstadoRendimiento } from "../../utils/helpers";
 import {
-  LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, ReferenceLine, Legend,
+  getFechaLima,
+  getIniciales,
+  calcularRatioHora,
+  getEstadoRendimiento,
+} from "../../utils/helpers";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+  Legend,
 } from "recharts";
 import BuscadorMedico from "../../components/BuscadorMedico";
 
-const COLORES = ["#378ADD", "#1D9E75", "#7F77DD", "#EF9F27", "#D85A30", "#E24B4A"];
+const COLORES = [
+  "#378ADD",
+  "#1D9E75",
+  "#7F77DD",
+  "#EF9F27",
+  "#D85A30",
+  "#E24B4A",
+];
 const COLORES_AVATAR = [
   "bg-blue-100 text-blue-700",
   "bg-teal-100 text-teal-700",
@@ -34,21 +54,40 @@ const Rendimiento = () => {
   // ── Filtros flotantes ──────────────────────────────────────
   const [filtroEsp, setFiltroEsp] = useState("todas");
   const [filtroMedico, setFiltroMedico] = useState("todos");
+  const [filtroTurno, setFiltroTurno] = useState("todos");
   const [fechaInicio, setFechaInicio] = useState(() => {
-    const d = new Date(hoyLima)
-    d.setDate(d.getDate() - 6)
-    return d.toISOString().slice(0, 10)
+    const d = new Date(hoyLima);
+    d.setDate(d.getDate() - 6);
+    return d.toISOString().slice(0, 10);
   });
   const [fechaFin, setFechaFin] = useState(hoyLima);
   const [granularidad, setGranularidad] = useState("dia"); // "dia" | "mes"
+  const [mesSeleccionado, setMesSeleccionado] = useState(() =>
+    parseInt(hoyLima.slice(5, 7)),
+  );
+  const [anioSeleccionado, setAnioSeleccionado] = useState(() =>
+    parseInt(hoyLima.slice(0, 4)),
+  );
+
+  // Fechas efectivas según modo
+  const fechaInicioEfectiva =
+    granularidad === "mes"
+      ? `${anioSeleccionado}-${String(mesSeleccionado).padStart(2, "0")}-01`
+      : fechaInicio;
+  const fechaFinEfectiva =
+    granularidad === "mes"
+      ? new Date(anioSeleccionado, mesSeleccionado, 0)
+          .toISOString()
+          .slice(0, 10)
+      : fechaFin;
 
   // Atajos de período
   const aplicarPeriodo = (dias) => {
-    const fin = hoyLima
-    const d = new Date(hoyLima)
-    d.setDate(d.getDate() - (dias - 1))
-    setFechaInicio(d.toISOString().slice(0, 10))
-    setFechaFin(fin)
+    const fin = hoyLima;
+    const d = new Date(hoyLima);
+    d.setDate(d.getDate() - (dias - 1));
+    setFechaInicio(d.toISOString().slice(0, 10));
+    setFechaFin(fin);
   };
 
   useEffect(() => {
@@ -75,7 +114,7 @@ const Rendimiento = () => {
           } catch {
             horariosMap[m.id] = [];
           }
-        })
+        }),
       );
       setHorarios(horariosMap);
     } catch (err) {
@@ -88,7 +127,9 @@ const Rendimiento = () => {
   // Filtra atenciones por rango de fechas
   const atencionesPeriodo = atenciones.filter((a) => {
     const fecha = a.registrado_en?.slice(0, 10);
-    return fecha >= fechaInicio && fecha <= fechaFin;
+    if (fecha < fechaInicioEfectiva || fecha > fechaFinEfectiva) return false;
+    if (filtroTurno !== "todos" && a.turno !== filtroTurno) return false;
+    return true;
   });
 
   // Horas programadas totales de un médico (todos sus horarios)
@@ -105,20 +146,31 @@ const Rendimiento = () => {
   const dataRendimiento = medicos
     .filter((m) => {
       if (filtroMedico !== "todos" && m.id !== filtroMedico) return false;
-      if (filtroEsp !== "todas" && m.especialidad_id !== filtroEsp) return false;
+      if (filtroEsp !== "todas" && m.especialidad_id !== filtroEsp)
+        return false;
       return true;
     })
     .map((m) => {
-      const totalAtenciones = atencionesPeriodo.filter((a) => a.medico_id === m.id).length;
+      const atencionesM = atencionesPeriodo.filter((a) => a.medico_id === m.id);
+      const totalAtenciones = atencionesM.length;
+      const manana = atencionesM.filter((a) => a.turno === "mañana").length;
+      const tarde = atencionesM.filter((a) => a.turno === "tarde").length;
       const horasProgramadas = calcularHorasProgramadas(m.id);
       const ratio = calcularRatioHora(totalAtenciones, horasProgramadas || 1);
       const estado = getEstadoRendimiento(ratio);
       const esp = especialidades.find((e) => e.id === m.especialidad_id);
       // Horario legible
-      const horariosM = (horarios[m.id] || []).filter(h => h.dia_semana);
-      const horarioStr = horariosM.length > 0
-        ? [...new Set(horariosM.map(h => `${h.dia_semana} ${h.hora_inicio}-${h.hora_fin}`))].join(', ')
-        : '—';
+      const horariosM = (horarios[m.id] || []).filter((h) => h.dia_semana);
+      const horarioStr =
+        horariosM.length > 0
+          ? [
+              ...new Set(
+                horariosM.map(
+                  (h) => `${h.dia_semana} ${h.hora_inicio}-${h.hora_fin}`,
+                ),
+              ),
+            ].join(", ")
+          : "—";
       return {
         id: m.id,
         nombre: `${m.nombre} ${m.apellido}`,
@@ -126,6 +178,8 @@ const Rendimiento = () => {
         especialidad: esp?.nombre || "—",
         horario: horarioStr,
         atenciones: totalAtenciones,
+        manana,
+        tarde,
         horas: Math.round(horasProgramadas * 10) / 10,
         ratio,
         estado,
@@ -135,28 +189,37 @@ const Rendimiento = () => {
 
   // KPIs globales
   const totalAtenciones = dataRendimiento.reduce((s, d) => s + d.atenciones, 0);
-  const totalHoras = Math.round(dataRendimiento.reduce((s, d) => s + d.horas, 0) * 10) / 10;
+  const totalHoras =
+    Math.round(dataRendimiento.reduce((s, d) => s + d.horas, 0) * 10) / 10;
   const ratioGlobal = calcularRatioHora(totalAtenciones, totalHoras || 1);
-  const promedioRatio = dataRendimiento.length > 0
-    ? Math.round((dataRendimiento.reduce((s, d) => s + d.ratio, 0) / dataRendimiento.length) * 10) / 10
-    : 0;
+  const promedioRatio =
+    dataRendimiento.length > 0
+      ? Math.round(
+          (dataRendimiento.reduce((s, d) => s + d.ratio, 0) /
+            dataRendimiento.length) *
+            10,
+        ) / 10
+      : 0;
   const medicosAlerta = dataRendimiento.filter((d) => d.ratio < promedioRatio);
 
   // ── Data para gráfico de líneas (tendencia diaria) ─────────
   const dataTendencia = (() => {
     const dias = {};
-    const d0 = new Date(fechaInicio);
-    const d1 = new Date(fechaFin);
+    const d0 = new Date(fechaInicioEfectiva);
+    const d1 = new Date(fechaFinEfectiva);
     for (let d = new Date(d0); d <= d1; d.setDate(d.getDate() + 1)) {
       const key = d.toISOString().slice(0, 10);
       dias[key] = { dia: key };
-      dataRendimiento.forEach((m) => { dias[key][m.nombre] = 0; });
+      dataRendimiento.forEach((m) => {
+        dias[key][m.nombre] = 0;
+      });
     }
     atencionesPeriodo.forEach((a) => {
       const medico = dataRendimiento.find((d) => d.id === a.medico_id);
       if (!medico) return;
       const key = a.registrado_en?.slice(0, 10);
-      if (dias[key]) dias[key][medico.nombre] = (dias[key][medico.nombre] || 0) + 1;
+      if (dias[key])
+        dias[key][medico.nombre] = (dias[key][medico.nombre] || 0) + 1;
     });
     return Object.values(dias);
   })();
@@ -164,7 +227,7 @@ const Rendimiento = () => {
   // ── Data para gráfico de barras dobles (horas vs atenciones) ─
   const dataBarras = dataRendimiento.map((d) => ({
     name: d.apellido,
-    "Atenciones": d.atenciones,
+    Atenciones: d.atenciones,
     "Horas prog.": d.horas,
   }));
 
@@ -174,7 +237,14 @@ const Rendimiento = () => {
 
     // Hoja resumen de rendimiento
     const filas = [
-      ["Especialidad", "Médico", "Horario", "Horas programadas", "Atenciones realizadas", "Ratio at/h"],
+      [
+        "Especialidad",
+        "Médico",
+        "Horario",
+        "Horas programadas",
+        "Atenciones realizadas",
+        "Ratio at/h",
+      ],
     ];
     dataRendimiento.forEach((d) => {
       filas.push([
@@ -190,13 +260,20 @@ const Rendimiento = () => {
     filas.push(["", "TOTAL", "", totalHoras, totalAtenciones, ratioGlobal]);
 
     const ws = XLSX.utils.aoa_to_sheet(filas);
-    XLSX.utils.book_append_sheet(wb, ws, `Rendimiento ${fechaInicio} al ${fechaFin}`);
+    XLSX.utils.book_append_sheet(
+      wb,
+      ws,
+      `Rendimiento ${fechaInicioEfectiva} al ${fechaFinEfectiva}`,
+    );
 
     // Hoja de tendencia por día/mes según granularidad
     if (granularidad === "dia") {
-      const filasTend = [["Fecha", ...dataRendimiento.map(d => d.nombre)]];
+      const filasTend = [["Fecha", ...dataRendimiento.map((d) => d.nombre)]];
       dataTendencia.forEach((fila) => {
-        filasTend.push([fila.dia, ...dataRendimiento.map(d => fila[d.nombre] || 0)]);
+        filasTend.push([
+          fila.dia,
+          ...dataRendimiento.map((d) => fila[d.nombre] || 0),
+        ]);
       });
       const wsTend = XLSX.utils.aoa_to_sheet(filasTend);
       XLSX.utils.book_append_sheet(wb, wsTend, "Detalle por día");
@@ -206,23 +283,31 @@ const Rendimiento = () => {
       atencionesPeriodo.forEach((a) => {
         const mes = a.registrado_en?.slice(0, 7);
         if (!porMes[mes]) porMes[mes] = {};
-        const medico = dataRendimiento.find(d => d.id === a.medico_id);
-        if (medico) porMes[mes][medico.nombre] = (porMes[mes][medico.nombre] || 0) + 1;
+        const medico = dataRendimiento.find((d) => d.id === a.medico_id);
+        if (medico)
+          porMes[mes][medico.nombre] = (porMes[mes][medico.nombre] || 0) + 1;
       });
-      const filasMes = [["Mes", ...dataRendimiento.map(d => d.nombre)]];
-      Object.entries(porMes).sort().forEach(([mes, counts]) => {
-        filasMes.push([mes, ...dataRendimiento.map(d => counts[d.nombre] || 0)]);
-      });
+      const filasMes = [["Mes", ...dataRendimiento.map((d) => d.nombre)]];
+      Object.entries(porMes)
+        .sort()
+        .forEach(([mes, counts]) => {
+          filasMes.push([
+            mes,
+            ...dataRendimiento.map((d) => counts[d.nombre] || 0),
+          ]);
+        });
       const wsMes = XLSX.utils.aoa_to_sheet(filasMes);
       XLSX.utils.book_append_sheet(wb, wsMes, "Detalle por mes");
     }
 
-    XLSX.writeFile(wb, `rendimiento-${fechaInicio}-${fechaFin}.xlsx`);
+    XLSX.writeFile(
+      wb,
+      `rendimiento-${fechaInicioEfectiva}-${fechaFinEfectiva}.xlsx`,
+    );
   };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
-
       {/* ── Filtros flotantes (sticky) ───────────────────────── */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-200 px-8 py-3 shadow-sm">
         <div className="flex items-center gap-3 flex-wrap">
@@ -238,55 +323,131 @@ const Rendimiento = () => {
           >
             <option value="todas">Todas las especialidades</option>
             {especialidades.map((e) => (
-              <option key={e.id} value={e.id}>{e.nombre}</option>
+              <option key={e.id} value={e.id}>
+                {e.nombre}
+              </option>
             ))}
           </select>
 
           {/* Médico — buscador */}
           <div className="w-52">
             <BuscadorMedico
-              medicos={[{ id: "todos", nombre: "Todos", apellido: "los médicos" }, ...medicos]}
+              medicos={[
+                { id: "todos", nombre: "Todos", apellido: "los médicos" },
+                ...medicos,
+              ]}
               value={filtroMedico}
               onChange={(m) => setFiltroMedico(m?.id || "todos")}
               placeholder="Todos los médicos"
             />
           </div>
 
-          {/* Fecha inicio */}
-          <input
-            type="date"
-            value={fechaInicio}
-            onChange={(e) => setFechaInicio(e.target.value)}
-            className="text-xs px-2 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-blue-400"
-          />
-          <span className="text-xs text-gray-400">→</span>
-          <input
-            type="date"
-            value={fechaFin}
-            onChange={(e) => setFechaFin(e.target.value)}
-            className="text-xs px-2 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-blue-400"
-          />
+          {/* Rango de fechas o selectores de mes/año según granularidad */}
+          {granularidad === "mes" ? (
+            <>
+              <select
+                value={mesSeleccionado}
+                onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
+                className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-blue-400 bg-white"
+              >
+                {[
+                  "Enero",
+                  "Febrero",
+                  "Marzo",
+                  "Abril",
+                  "Mayo",
+                  "Junio",
+                  "Julio",
+                  "Agosto",
+                  "Septiembre",
+                  "Octubre",
+                  "Noviembre",
+                  "Diciembre",
+                ].map((nombre, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {nombre}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={anioSeleccionado}
+                onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
+                className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-blue-400 bg-white"
+              >
+                {[2024, 2025, 2026].map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <>
+              {/* Fecha inicio */}
+              <input
+                type="date"
+                value={fechaInicio}
+                onChange={(e) => setFechaInicio(e.target.value)}
+                className="text-xs px-2 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-blue-400"
+              />
+              <span className="text-xs text-gray-400">→</span>
+              <input
+                type="date"
+                value={fechaFin}
+                onChange={(e) => setFechaFin(e.target.value)}
+                className="text-xs px-2 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-blue-400"
+              />
 
-          {/* Atajos de período */}
+              {/* Atajos de período */}
+              <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+                {[
+                  { label: "Hoy", dias: 1 },
+                  { label: "7d", dias: 7 },
+                  { label: "30d", dias: 30 },
+                ].map((p) => (
+                  <button
+                    key={p.dias}
+                    onClick={() => aplicarPeriodo(p.dias)}
+                    className="px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-white rounded-md transition-all"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Filtro turno */}
           <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
             {[
-              { label: "Hoy", dias: 1 },
-              { label: "7d", dias: 7 },
-              { label: "30d", dias: 30 },
-            ].map((p) => (
+              { label: "Ambos", v: "todos" },
+              { label: "Mañana", v: "mañana" },
+              { label: "Tarde", v: "tarde" },
+            ].map((t) => (
               <button
-                key={p.dias}
-                onClick={() => aplicarPeriodo(p.dias)}
-                className="px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-white rounded-md transition-all"
+                key={t.v}
+                onClick={() => setFiltroTurno(t.v)}
+                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+                  filtroTurno === t.v
+                    ? t.v === "mañana"
+                      ? "bg-amber-500 text-white"
+                      : t.v === "tarde"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-700 text-white"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
               >
-                {p.label}
+                {t.label}
               </button>
             ))}
           </div>
 
           {/* Granularidad Excel */}
           <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-            {[{ label: "Por día", v: "dia" }, { label: "Por mes", v: "mes" }].map((g) => (
+            {[
+              { label: "Por día", v: "dia" },
+              { label: "Por mes", v: "mes" },
+            ].map((g) => (
               <button
                 key={g.v}
                 onClick={() => setGranularidad(g.v)}
@@ -310,33 +471,53 @@ const Rendimiento = () => {
       <div className="px-8 py-6">
         {cargando ? (
           <div className="flex items-center justify-center h-64">
-            <div className="text-sm text-gray-400">Calculando rendimiento...</div>
+            <div className="text-sm text-gray-400">
+              Calculando rendimiento...
+            </div>
           </div>
         ) : (
           <div className="max-w-6xl space-y-5">
-
             {/* ── KPIs ──────────────────────────────────────── */}
             <div className="grid grid-cols-4 gap-4">
               <div className="bg-white border border-gray-200 rounded-2xl p-4">
-                <div className="text-xs text-gray-400 mb-1">Total atenciones</div>
-                <div className="text-3xl font-medium text-blue-600">{totalAtenciones}</div>
+                <div className="text-xs text-gray-400 mb-1">
+                  Total atenciones
+                </div>
+                <div className="text-3xl font-medium text-blue-600">
+                  {totalAtenciones}
+                </div>
                 <div className="text-xs text-gray-400 mt-1">en el período</div>
               </div>
               <div className="bg-white border border-gray-200 rounded-2xl p-4">
-                <div className="text-xs text-gray-400 mb-1">Total horas prog.</div>
-                <div className="text-3xl font-medium text-teal-600">{totalHoras}</div>
-                <div className="text-xs text-gray-400 mt-1">horas registradas</div>
+                <div className="text-xs text-gray-400 mb-1">
+                  Total horas prog.
+                </div>
+                <div className="text-3xl font-medium text-teal-600">
+                  {totalHoras}
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  horas registradas
+                </div>
               </div>
               <div className="bg-white border border-gray-200 rounded-2xl p-4">
                 <div className="text-xs text-gray-400 mb-1">Ratio global</div>
-                <div className="text-3xl font-medium text-purple-600">{ratioGlobal}</div>
-                <div className="text-xs text-gray-400 mt-1">atenciones/hora</div>
+                <div className="text-3xl font-medium text-purple-600">
+                  {ratioGlobal}
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  atenciones/hora
+                </div>
               </div>
               <div className="bg-white border border-gray-200 rounded-2xl p-4">
-                <div className="text-xs text-gray-400 mb-1">Bajo el promedio</div>
-                <div className="text-3xl font-medium text-red-500">{medicosAlerta.length}</div>
+                <div className="text-xs text-gray-400 mb-1">
+                  Bajo el promedio
+                </div>
+                <div className="text-3xl font-medium text-red-500">
+                  {medicosAlerta.length}
+                </div>
                 <div className="text-xs text-gray-400 mt-1">
-                  médico{medicosAlerta.length !== 1 ? "s" : ""} — prom. {promedioRatio} at/h
+                  médico{medicosAlerta.length !== 1 ? "s" : ""} — prom.{" "}
+                  {promedioRatio} at/h
                 </div>
               </div>
             </div>
@@ -349,10 +530,15 @@ const Rendimiento = () => {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {medicosAlerta.map((m) => (
-                    <div key={m.id} className="flex items-center gap-2 bg-white border border-red-200 rounded-xl px-3 py-1.5">
+                    <div
+                      key={m.id}
+                      className="flex items-center gap-2 bg-white border border-red-200 rounded-xl px-3 py-1.5"
+                    >
                       <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
                       <span className="text-xs text-gray-700">{m.nombre}</span>
-                      <span className="text-xs font-medium text-red-600">{m.ratio} at/h</span>
+                      <span className="text-xs font-medium text-red-600">
+                        {m.ratio} at/h
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -364,18 +550,38 @@ const Rendimiento = () => {
               <div className="text-sm font-medium text-gray-900 mb-1">
                 Horas programadas vs Atenciones realizadas por médico
               </div>
-              <div className="text-xs text-gray-400 mb-4">Comparación directa por médico</div>
+              <div className="text-xs text-gray-400 mb-4">
+                Comparación directa por médico
+              </div>
               <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={dataBarras} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                <BarChart
+                  data={dataBarras}
+                  margin={{ top: 10, right: 20, left: 0, bottom: 5 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#9ca3af" }} />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 10, fill: "#9ca3af" }}
+                  />
                   <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} />
                   <Tooltip
-                    contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid #e5e7eb" }}
+                    contentStyle={{
+                      fontSize: 12,
+                      borderRadius: 10,
+                      border: "1px solid #e5e7eb",
+                    }}
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="Horas prog." fill="#1D9E75" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Atenciones" fill="#378ADD" radius={[4, 4, 0, 0]} />
+                  <Bar
+                    dataKey="Horas prog."
+                    fill="#1D9E75"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="Atenciones"
+                    fill="#378ADD"
+                    radius={[4, 4, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -392,27 +598,48 @@ const Rendimiento = () => {
               {/* Leyenda */}
               <div className="flex flex-wrap gap-3 mb-4">
                 {dataRendimiento.map((d, i) => (
-                  <div key={d.id} className="flex items-center gap-1.5 text-xs text-gray-600">
-                    <div className="w-3 h-3 rounded-full" style={{ background: COLORES[i % COLORES.length] }} />
+                  <div
+                    key={d.id}
+                    className="flex items-center gap-1.5 text-xs text-gray-600"
+                  >
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ background: COLORES[i % COLORES.length] }}
+                    />
                     {d.nombre}
                   </div>
                 ))}
               </div>
 
               <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={dataTendencia} margin={{ top: 20, right: 30, left: 0, bottom: 10 }}>
+                <LineChart
+                  data={dataTendencia}
+                  margin={{ top: 20, right: 30, left: 0, bottom: 10 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="dia" tick={{ fontSize: 10, fill: "#9ca3af" }} />
+                  <XAxis
+                    dataKey="dia"
+                    tick={{ fontSize: 10, fill: "#9ca3af" }}
+                  />
                   <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} />
                   <Tooltip
-                    contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid #e5e7eb" }}
+                    contentStyle={{
+                      fontSize: 12,
+                      borderRadius: 10,
+                      border: "1px solid #e5e7eb",
+                    }}
                   />
                   <ReferenceLine
                     y={promedioRatio}
                     stroke="#E24B4A"
                     strokeDasharray="4 4"
                     strokeWidth={1.5}
-                    label={{ value: `Prom: ${promedioRatio}`, position: "right", fontSize: 10, fill: "#E24B4A" }}
+                    label={{
+                      value: `Prom: ${promedioRatio}`,
+                      position: "right",
+                      fontSize: 10,
+                      fill: "#E24B4A",
+                    }}
                   />
                   {dataRendimiento.map((d, i) => (
                     <Line
@@ -437,49 +664,112 @@ const Rendimiento = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100">
-                    <th className="text-left text-xs text-gray-400 font-medium pb-2 w-6">#</th>
-                    <th className="text-left text-xs text-gray-400 font-medium pb-2">Médico</th>
-                    <th className="text-left text-xs text-gray-400 font-medium pb-2">Especialidad</th>
-                    <th className="text-right text-xs text-gray-400 font-medium pb-2">Atenciones</th>
-                    <th className="text-right text-xs text-gray-400 font-medium pb-2">Horas prog.</th>
-                    <th className="text-right text-xs text-gray-400 font-medium pb-2">At/hora</th>
-                    <th className="text-right text-xs text-gray-400 font-medium pb-2">vs prom.</th>
-                    <th className="text-right text-xs text-gray-400 font-medium pb-2">Estado</th>
+                    <th className="text-left text-xs text-gray-400 font-medium pb-2 w-6">
+                      #
+                    </th>
+                    <th className="text-left text-xs text-gray-400 font-medium pb-2">
+                      Médico
+                    </th>
+                    <th className="text-left text-xs text-gray-400 font-medium pb-2">
+                      Especialidad
+                    </th>
+                    <th className="text-right text-xs text-gray-400 font-medium pb-2">
+                      Atenciones
+                    </th>
+                    <th className="text-right text-xs text-amber-500 font-medium pb-2">
+                      Mañana
+                    </th>
+                    <th className="text-right text-xs text-blue-500 font-medium pb-2">
+                      Tarde
+                    </th>
+                    <th className="text-right text-xs text-gray-400 font-medium pb-2">
+                      Horas prog.
+                    </th>
+                    <th className="text-right text-xs text-gray-400 font-medium pb-2">
+                      At/hora
+                    </th>
+                    <th className="text-right text-xs text-gray-400 font-medium pb-2">
+                      vs prom.
+                    </th>
+                    <th className="text-right text-xs text-gray-400 font-medium pb-2">
+                      Estado
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {dataRendimiento.map((d, index) => {
-                    const diff = Math.round((d.ratio - promedioRatio) * 10) / 10;
+                    const diff =
+                      Math.round((d.ratio - promedioRatio) * 10) / 10;
                     return (
-                      <tr key={d.id} className="border-b border-gray-50 last:border-0">
-                        <td className="py-3 text-xs text-gray-400">{index + 1}</td>
+                      <tr
+                        key={d.id}
+                        className="border-b border-gray-50 last:border-0"
+                      >
+                        <td className="py-3 text-xs text-gray-400">
+                          {index + 1}
+                        </td>
                         <td className="py-3">
                           <div className="flex items-center gap-2">
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${COLORES_AVATAR[index % COLORES_AVATAR.length]}`}>
-                              {d.nombre.split(" ").map(p => p[0]).slice(0, 2).join("")}
+                            <div
+                              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${COLORES_AVATAR[index % COLORES_AVATAR.length]}`}
+                            >
+                              {d.nombre
+                                .split(" ")
+                                .map((p) => p[0])
+                                .slice(0, 2)
+                                .join("")}
                             </div>
-                            <span className="text-xs font-medium text-gray-800">{d.nombre}</span>
+                            <span className="text-xs font-medium text-gray-800">
+                              {d.nombre}
+                            </span>
                           </div>
                         </td>
-                        <td className="py-3 text-xs text-gray-500">{d.especialidad}</td>
-                        <td className="py-3 text-xs font-medium text-gray-900 text-right">{d.atenciones}</td>
-                        <td className="py-3 text-xs text-gray-600 text-right">{d.horas}h</td>
+                        <td className="py-3 text-xs text-gray-500">
+                          {d.especialidad}
+                        </td>
+                        <td className="py-3 text-xs font-medium text-gray-900 text-right">
+                          {d.atenciones}
+                        </td>
+                        <td className="py-3 text-xs text-amber-600 text-right">
+                          {d.manana}
+                        </td>
+                        <td className="py-3 text-xs text-blue-600 text-right">
+                          {d.tarde}
+                        </td>
+                        <td className="py-3 text-xs text-gray-600 text-right">
+                          {d.horas}h
+                        </td>
                         <td className="py-3 text-xs font-medium text-right">
-                          <span className={d.ratio >= promedioRatio ? "text-green-600" : "text-red-500"}>
+                          <span
+                            className={
+                              d.ratio >= promedioRatio
+                                ? "text-green-600"
+                                : "text-red-500"
+                            }
+                          >
                             {d.ratio} at/h
                           </span>
                         </td>
                         <td className="py-3 text-xs text-right">
-                          <span className={diff >= 0 ? "text-green-600" : "text-red-500"}>
-                            {diff >= 0 ? "+" : ""}{diff}
+                          <span
+                            className={
+                              diff >= 0 ? "text-green-600" : "text-red-500"
+                            }
+                          >
+                            {diff >= 0 ? "+" : ""}
+                            {diff}
                           </span>
                         </td>
                         <td className="py-3 text-right">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            d.estado.color === "green" ? "bg-green-50 text-green-700"
-                            : d.estado.color === "amber" ? "bg-amber-50 text-amber-700"
-                            : "bg-red-50 text-red-600"
-                          }`}>
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              d.estado.color === "green"
+                                ? "bg-green-50 text-green-700"
+                                : d.estado.color === "amber"
+                                  ? "bg-amber-50 text-amber-700"
+                                  : "bg-red-50 text-red-600"
+                            }`}
+                          >
                             {d.estado.label}
                           </span>
                         </td>
@@ -488,7 +778,10 @@ const Rendimiento = () => {
                   })}
                   {dataRendimiento.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="text-xs text-gray-400 text-center py-6">
+                      <td
+                        colSpan={10}
+                        className="text-xs text-gray-400 text-center py-6"
+                      >
                         Sin datos en el período seleccionado
                       </td>
                     </tr>
@@ -496,18 +789,31 @@ const Rendimiento = () => {
                   {dataRendimiento.length > 0 && (
                     <tr className="bg-gray-50 border-t border-gray-200">
                       <td className="py-3 text-xs text-gray-500" />
-                      <td className="py-3 text-xs font-medium text-gray-700">Total clínica</td>
+                      <td className="py-3 text-xs font-medium text-gray-700">
+                        Total clínica
+                      </td>
                       <td />
-                      <td className="py-3 text-xs font-medium text-blue-600 text-right">{totalAtenciones}</td>
-                      <td className="py-3 text-xs font-medium text-teal-600 text-right">{totalHoras}h</td>
-                      <td className="py-3 text-xs font-medium text-purple-600 text-right">{ratioGlobal} at/h</td>
+                      <td className="py-3 text-xs font-medium text-blue-600 text-right">
+                        {totalAtenciones}
+                      </td>
+                      <td className="py-3 text-xs font-medium text-amber-600 text-right">
+                        {dataRendimiento.reduce((s, d) => s + d.manana, 0)}
+                      </td>
+                      <td className="py-3 text-xs font-medium text-blue-500 text-right">
+                        {dataRendimiento.reduce((s, d) => s + d.tarde, 0)}
+                      </td>
+                      <td className="py-3 text-xs font-medium text-teal-600 text-right">
+                        {totalHoras}h
+                      </td>
+                      <td className="py-3 text-xs font-medium text-purple-600 text-right">
+                        {ratioGlobal} at/h
+                      </td>
                       <td colSpan={2} />
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
-
           </div>
         )}
       </div>
