@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.schemas.auth import LoginRequest, TokenResponse
@@ -12,9 +12,14 @@ router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
 
 @router.post("/login", response_model=TokenResponse)
-async def endpoint_login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def endpoint_login(data: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
     """Endpoint de login — retorna token JWT si las credenciales son correctas"""
-    return await login(data, db)
+    real_ip = (
+        request.headers.get("X-Real-IP")
+        or request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+        or (request.client.host if request.client else None)
+    )
+    return await login(data, db, ip=real_ip)
 
 
 @router.post("/usuarios", response_model=UsuarioResponse)
