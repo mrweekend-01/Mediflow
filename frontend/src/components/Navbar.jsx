@@ -43,6 +43,7 @@ const menuPorRol = {
     { label: "Tendencia", path: "/director/tendencia", icono: "↗" },
     { label: "Turno de hoy", path: "/director/turno", icono: "◑" },
     { label: "Exportar", path: "/director/exportar", icono: "↓" },
+    { label: "Auditoría", path: "/auditoria", icono: "🔍" },
   ],
 };
 
