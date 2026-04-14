@@ -1,8 +1,8 @@
 import axios from "axios";
 
 // URL base del backend.
-// En Docker: VITE_API_URL=/api (nginx proxy) — en desarrollo: http://127.0.0.1:8002
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8002";
+// En Docker: VITE_API_URL=/api (nginx proxy) — en desarrollo: http://127.0.0.1:8003
+const BASE_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8003";
 
 // Instancia de axios con configuración base
 const api = axios.create({
