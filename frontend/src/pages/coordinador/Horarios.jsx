@@ -36,6 +36,7 @@ const Horarios = () => {
   });
 
   const [guardando, setGuardando] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
 
   useEffect(() => {
     cargarMedicos();
@@ -230,34 +231,58 @@ const Horarios = () => {
 
       <div className="flex h-[calc(100vh-73px)]">
         {/* Lista médicos */}
-        <div className="w-72 border-r border-gray-200 bg-white overflow-y-auto">
-          <div className="px-4 py-3 text-xs text-gray-400 font-medium border-b border-gray-100">
-            Selecciona un médico
+        <div className="w-72 border-r border-gray-200 bg-white flex flex-col">
+          <div className="px-3 py-3 border-b border-gray-100">
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar médico..."
+              className="w-full px-3 py-1.5 text-xs border border-gray-200 rounded-lg outline-none focus:border-blue-400 placeholder-gray-400"
+            />
           </div>
-          {medicos.map((m, i) => (
-            <div
-              key={m.id}
-              onClick={() => setMedicoSeleccionado(m)}
-              className={`flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-gray-50 transition-colors ${
-                medicoSeleccionado?.id === m.id
-                  ? "bg-blue-50"
-                  : "hover:bg-gray-50"
-              }`}
-            >
-              <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${coloresAvatar[i % coloresAvatar.length]}`}
-              >
-                {getIniciales(m.nombre, m.apellido)}
-              </div>
-              <div className="min-w-0">
+          <div className="overflow-y-auto flex-1">
+            {medicos
+              .filter((m) =>
+                `${m.nombre} ${m.apellido}`
+                  .toLowerCase()
+                  .includes(busqueda.toLowerCase()),
+              )
+              .map((m, i) => (
                 <div
-                  className={`text-xs font-medium truncate ${medicoSeleccionado?.id === m.id ? "text-blue-700" : "text-gray-800"}`}
+                  key={m.id}
+                  onClick={() => setMedicoSeleccionado(m)}
+                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-gray-50 transition-colors ${
+                    medicoSeleccionado?.id === m.id
+                      ? "bg-blue-50"
+                      : "hover:bg-gray-50"
+                  }`}
                 >
-                  {m.nombre} {m.apellido}
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${coloresAvatar[medicos.indexOf(m) % coloresAvatar.length]}`}
+                  >
+                    {getIniciales(m.nombre, m.apellido)}
+                  </div>
+                  <div className="min-w-0">
+                    <div
+                      className={`text-xs font-medium truncate ${medicoSeleccionado?.id === m.id ? "text-blue-700" : "text-gray-800"}`}
+                    >
+                      {m.nombre} {m.apellido}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              ))}
+            {busqueda &&
+              medicos.filter((m) =>
+                `${m.nombre} ${m.apellido}`
+                  .toLowerCase()
+                  .includes(busqueda.toLowerCase()),
+              ).length === 0 && (
+                <div className="px-4 py-6 text-xs text-gray-400 text-center">
+                  Sin resultados para "{busqueda}"
+                </div>
+              )}
+          </div>
         </div>
 
         {/* Horarios */}
