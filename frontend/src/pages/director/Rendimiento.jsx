@@ -232,6 +232,73 @@ const Rendimiento = () => {
     "Horas prog.": d.horas,
   }));
 
+  // ── Rango corto: barras agrupadas por día ──────────────────
+  const DIAS_SEMANA = [
+    "domingo",
+    "lunes",
+    "martes",
+    "miercoles",
+    "jueves",
+    "viernes",
+    "sabado",
+  ];
+
+  const diasEnRango = (() => {
+    const d0 = new Date(fechaInicioEfectiva + "T12:00:00");
+    const d1 = new Date(fechaFinEfectiva + "T12:00:00");
+    return Math.round((d1 - d0) / 86400000) + 1;
+  })();
+
+  const rangoCorto = diasEnRango < 15;
+
+  const medicoIdsFiltrados = new Set(dataRendimiento.map((d) => d.id));
+
+  const dataBarrasDia = (() => {
+    if (!rangoCorto) return [];
+    const resultado = [];
+    const d0 = new Date(fechaInicioEfectiva + "T12:00:00");
+    const d1 = new Date(fechaFinEfectiva + "T12:00:00");
+    for (let d = new Date(d0); d <= d1; d.setDate(d.getDate() + 1)) {
+      const fecha = new Date(d).toISOString().slice(0, 10);
+      const nombreDia = DIAS_SEMANA[d.getDay()];
+
+      const atencionesDia = atencionesPeriodo.filter(
+        (a) =>
+          a.registrado_en?.slice(0, 10) === fecha &&
+          medicoIdsFiltrados.has(a.medico_id),
+      ).length;
+
+      const horasDia = dataRendimiento.reduce((total, medico) => {
+        const horariosM = horarios[medico.id] || [];
+        return (
+          total +
+          horariosM
+            .filter((h) =>
+              h.fecha ? h.fecha === fecha : h.dia_semana === nombreDia,
+            )
+            .reduce((sum, h) => {
+              const inicio = new Date(`2000-01-01T${h.hora_inicio}`);
+              const fin = new Date(`2000-01-01T${h.hora_fin}`);
+              return sum + (fin - inicio) / 3600000;
+            }, 0)
+        );
+      }, 0);
+
+      const labelDia = new Date(d).toLocaleDateString("es-PE", {
+        weekday: "short",
+        day: "2-digit",
+        month: "2-digit",
+      });
+
+      resultado.push({
+        name: labelDia,
+        Atenciones: atencionesDia,
+        "Horas prog.": Math.round(horasDia * 10) / 10,
+      });
+    }
+    return resultado;
+  })();
+
   // ── Exportar Excel ─────────────────────────────────────────
   const exportarExcel = () => {
     const wb = XLSX.utils.book_new();
@@ -566,14 +633,18 @@ const Rendimiento = () => {
             {/* ── Gráfico de barras dobles: horas vs atenciones ── */}
             <div className="bg-white border border-gray-200 rounded-2xl p-5">
               <div className="text-sm font-medium text-gray-900 mb-1">
-                Horas programadas vs Atenciones realizadas por médico
+                {rangoCorto
+                  ? "Atenciones y horas por día"
+                  : "Horas programadas vs Atenciones realizadas por médico"}
               </div>
               <div className="text-xs text-gray-400 mb-4">
-                Comparación directa por médico
+                {rangoCorto
+                  ? "Comparación diaria en el rango seleccionado"
+                  : "Comparación directa por médico"}
               </div>
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart
-                  data={dataBarras}
+                  data={rangoCorto ? dataBarrasDia : dataBarras}
                   margin={{ top: 10, right: 20, left: 0, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
