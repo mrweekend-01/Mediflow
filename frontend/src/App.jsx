@@ -30,6 +30,7 @@ import CargaHistorica from "./pages/archivos/CargaHistorica";
 import ResumenControlMedico from "./pages/control-medico/ResumenControlMedico";
 import DashboardCampanas from "./pages/campanas/DashboardCampanas";
 import Auditoria from "./pages/superadmin/Auditoria";
+import DashboardCampanas from "./pages/campanas/DashboardCampanas";
 // Pantalla de carga mientras verifica la sesión
 const LoadingScreen = () => (
   <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -51,7 +52,9 @@ const App = () => {
         ? "/admision"
         : usuario?.rol === "marketing" || usuario?.rol === "comercial"
           ? "/campanas"
-          : "/coordinador";
+          : usuario?.rol === "archivos"
+            ? "/archivos"
+            : "/coordinador";
 
   return (
     <Routes>
