@@ -8,3 +8,4 @@ from app.routers.dashboard import router as dashboard_router
 from app.routers.triaje import router as triaje_router
 from app.routers.control_medico import router as control_medico_router
 from app.routers.auditoria import router as auditoria_router
+from app.routers.campanas import router as campanas_router
