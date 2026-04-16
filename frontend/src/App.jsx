@@ -28,6 +28,7 @@ import ResumenTriaje from "./pages/triaje/ResumenTriaje";
 
 import CargaHistorica from "./pages/archivos/CargaHistorica";
 import ResumenControlMedico from "./pages/control-medico/ResumenControlMedico";
+import DashboardCampanas from "./pages/campanas/DashboardCampanas";
 // Pantalla de carga mientras verifica la sesión
 const LoadingScreen = () => (
   <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -47,7 +48,9 @@ const App = () => {
       ? "/director"
       : usuario?.rol === "admision"
         ? "/admision"
-        : "/coordinador";
+        : usuario?.rol === "marketing" || usuario?.rol === "comercial"
+          ? "/campanas"
+          : "/coordinador";
 
   return (
     <Routes>
@@ -233,6 +236,20 @@ const App = () => {
           <PrivateRoute rolesPermitidos={["director", "superadmin"]}>
             <Layout>
               <Exportar />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+
+      {/* Rutas de campañas */}
+      <Route
+        path="/campanas"
+        element={
+          <PrivateRoute
+            rolesPermitidos={["marketing", "comercial", "superadmin", "director"]}
+          >
+            <Layout>
+              <DashboardCampanas />
             </Layout>
           </PrivateRoute>
         }

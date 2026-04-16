@@ -10,7 +10,8 @@ from app.routers import (
     atenciones_router,
     dashboard_router,
     triaje_router,
-    control_medico_router
+    control_medico_router,
+    campanas_router
 )
 
 # Instancia principal de la aplicación FastAPI
@@ -41,6 +42,7 @@ app.include_router(atenciones_router)
 app.include_router(dashboard_router)
 app.include_router(triaje_router)
 app.include_router(control_medico_router)
+app.include_router(campanas_router)
 
 
 @app.get("/", tags=["Root"])
