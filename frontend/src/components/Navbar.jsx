@@ -51,6 +51,7 @@ const menuPorRol = {
     { label: "Turno de hoy", path: "/director/turno", icono: "◑" },
     { label: "Campañas", path: "/campanas", icono: "📣" },
     { label: "Exportar", path: "/director/exportar", icono: "↓" },
+    { label: "Auditoría", path: "/auditoria", icono: "🔍" },
   ],
 };
 

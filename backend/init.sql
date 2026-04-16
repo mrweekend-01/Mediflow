@@ -100,11 +100,23 @@ CREATE TABLE IF NOT EXISTS control_medico (
     registrado_en   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS auditoria (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id      UUID REFERENCES usuarios(id),
+    usuario_email   VARCHAR(100),
+    usuario_nombre  VARCHAR(100),
+    accion          VARCHAR(200) NOT NULL,
+    ip              VARCHAR(50),
+    fecha           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Índices para queries frecuentes
 CREATE INDEX IF NOT EXISTS idx_atenciones_clinica ON atenciones(clinica_id);
 CREATE INDEX IF NOT EXISTS idx_atenciones_medico  ON atenciones(medico_id);
 CREATE INDEX IF NOT EXISTS idx_triaje_clinica_fecha ON triaje(clinica_id, fecha);
 CREATE INDEX IF NOT EXISTS idx_control_medico_clinica_fecha ON control_medico(clinica_id, fecha);
+CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(fecha DESC);
+CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id);
 
 
 -- ── Datos iniciales ───────────────────────────────────────────

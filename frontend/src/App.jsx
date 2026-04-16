@@ -29,6 +29,7 @@ import ResumenTriaje from "./pages/triaje/ResumenTriaje";
 import CargaHistorica from "./pages/archivos/CargaHistorica";
 import ResumenControlMedico from "./pages/control-medico/ResumenControlMedico";
 import DashboardCampanas from "./pages/campanas/DashboardCampanas";
+import Auditoria from "./pages/superadmin/Auditoria";
 // Pantalla de carga mientras verifica la sesión
 const LoadingScreen = () => (
   <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -250,6 +251,18 @@ const App = () => {
           >
             <Layout>
               <DashboardCampanas />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+
+      {/* Auditoría — solo superadmin */}
+      <Route
+        path="/auditoria"
+        element={
+          <PrivateRoute rolesPermitidos={["superadmin"]}>
+            <Layout>
+              <Auditoria />
             </Layout>
           </PrivateRoute>
         }

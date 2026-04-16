@@ -6,3 +6,4 @@ from app.models.horario import Horario
 from app.models.atencion import Atencion
 from app.models.triaje import Triaje
 from app.models.control_medico import ControlMedico
+from app.models.auditoria import Auditoria

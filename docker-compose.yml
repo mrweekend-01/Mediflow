@@ -19,7 +19,7 @@ services:
   backend:
     build: ./backend
     ports:
-      - "8002:8002"
+      - "0.0.0.0:8003:8003"
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:Sistemas123@db:5432/mediflow_db
       SECRET_KEY: mediflow_clave_super_secreta_2025
@@ -35,7 +35,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "3000:80"
+      - "0.0.0.0:3000:80"
     depends_on:
       - backend
 
