@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     nombre        VARCHAR(100) NOT NULL,
     email         VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    rol           VARCHAR(20) NOT NULL,
+    rol           VARCHAR(20) NOT NULL CHECK (rol IN ('superadmin','coordinador','admision','director','archivos','marketing','comercial')),
     activo        BOOLEAN NOT NULL DEFAULT TRUE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -105,9 +105,9 @@ CREATE TABLE IF NOT EXISTS auditoria (
     usuario_id      UUID REFERENCES usuarios(id),
     usuario_email   VARCHAR(100),
     usuario_nombre  VARCHAR(100),
-    accion          VARCHAR(200) NOT NULL,
+    accion          VARCHAR(200),
     ip              VARCHAR(50),
-    fecha           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    fecha           TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Índices para queries frecuentes
@@ -230,7 +230,9 @@ INSERT INTO usuarios (id, clinica_id, nombre, email, password_hash, rol, activo)
 ('22a7982b-0d7f-4da7-9faa-dab020a55582','6bfdaee8-3280-43f8-bffc-5e3308c8b5fd','Archivos','archivos@csjd.com','$2b$12$uF1m6aXCDyZSAzmRor7eY..oGSZyUGWTBZuDt7F/qiQTzASanJuRe','archivos',TRUE),
 ('dc313231-aa6b-45d1-be37-4155419708ab','6bfdaee8-3280-43f8-bffc-5e3308c8b5fd','Coordinador Admision','coordinador@csjd.com','$2b$12$j06mfbB52Xfm27m6.Gio3uAzr8D7H0H4AJ8XV5wUpJOEP5iYIuroK','coordinador',TRUE),
 ('87464c03-dc58-4582-b82b-dca11d3c6aad','6bfdaee8-3280-43f8-bffc-5e3308c8b5fd','Director Medico','director@csjd.com','$2b$12$BieOKg0M0AYeKAsv0UYzhO3GQTHG3gOGJJF1d94JaUHjYy56cRFCW','director',TRUE),
-('e73a4d10-7590-4e0f-ab95-4795148c9a11','6bfdaee8-3280-43f8-bffc-5e3308c8b5fd','Super Admin','superadmin@mediflow.com','$2b$12$Xos..b50izumH3nYhxPkeuDbpJ47xG1S7uFPZaaoJ9vTe9uv9zxn6','superadmin',TRUE)
+('e73a4d10-7590-4e0f-ab95-4795148c9a11','6bfdaee8-3280-43f8-bffc-5e3308c8b5fd','Super Admin','superadmin@mediflow.com','$2b$12$Xos..b50izumH3nYhxPkeuDbpJ47xG1S7uFPZaaoJ9vTe9uv9zxn6','superadmin',TRUE),
+('a1b2c3d4-e5f6-7890-abcd-ef1234567890','6bfdaee8-3280-43f8-bffc-5e3308c8b5fd','Marketing','marketing@csjd.com','$2b$12$PLACEHOLDER.MARKETING.HASH.ACTUALIZAR.MANUALMENTE.XX','marketing',TRUE),
+('b2c3d4e5-f6a7-8901-bcde-f12345678901','6bfdaee8-3280-43f8-bffc-5e3308c8b5fd','Comercial','comercial@csjd.com','$2b$12$PLACEHOLDER.COMERCIAL.HASH.ACTUALIZAR.MANUALMENTE.XX','comercial',TRUE)
 ON CONFLICT (id) DO NOTHING;
 
 -- Horarios de médicos (58)
