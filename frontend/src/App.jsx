@@ -28,6 +28,7 @@ import ResumenTriaje from "./pages/triaje/ResumenTriaje";
 
 import CargaHistorica from "./pages/archivos/CargaHistorica";
 import ResumenControlMedico from "./pages/control-medico/ResumenControlMedico";
+import DashboardCampanas from "./pages/campanas/DashboardCampanas";
 import Auditoria from "./pages/superadmin/Auditoria";
 import DashboardCampanas from "./pages/campanas/DashboardCampanas";
 // Pantalla de carga mientras verifica la sesión

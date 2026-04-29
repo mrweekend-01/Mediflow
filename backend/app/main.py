@@ -42,6 +42,7 @@ from app.routers import (
     dashboard_router,
     triaje_router,
     control_medico_router,
+    campanas_router,
     auditoria_router,
     campanas_router,
 )
@@ -115,6 +116,7 @@ app.include_router(atenciones_router)
 app.include_router(dashboard_router)
 app.include_router(triaje_router)
 app.include_router(control_medico_router)
+app.include_router(campanas_router)
 app.include_router(auditoria_router)
 app.include_router(campanas_router)
 

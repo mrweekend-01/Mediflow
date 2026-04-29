@@ -18,6 +18,12 @@ const menuPorRol = {
     { label: "Resumen triaje", path: "/triaje/resumen", icono: "📊" },
   ],
   archivos: [{ label: "Carga histórica", path: "/archivos", icono: "📂" }],
+  marketing: [
+    { label: "Campañas", path: "/campanas", icono: "📣" },
+  ],
+  comercial: [
+    { label: "Campañas", path: "/campanas", icono: "📣" },
+  ],
   director: [
     { label: "Dashboard", path: "/director", icono: "▦" },
     { label: "Por médico", path: "/director/medico", icono: "◎" },
@@ -25,6 +31,7 @@ const menuPorRol = {
     { label: "Rendimiento", path: "/director/rendimiento", icono: "▲" },
     { label: "Tendencia", path: "/director/tendencia", icono: "↗" },
     { label: "Turno de hoy", path: "/director/turno", icono: "◑" },
+    { label: "Campañas", path: "/campanas", icono: "📣" },
     { label: "Exportar", path: "/director/exportar", icono: "↓" },
   ],
   superadmin: [
@@ -42,6 +49,7 @@ const menuPorRol = {
     { label: "Rendimiento", path: "/director/rendimiento", icono: "▲" },
     { label: "Tendencia", path: "/director/tendencia", icono: "↗" },
     { label: "Turno de hoy", path: "/director/turno", icono: "◑" },
+    { label: "Campañas", path: "/campanas", icono: "📣" },
     { label: "Exportar", path: "/director/exportar", icono: "↓" },
     { label: "Auditoría", path: "/auditoria", icono: "🔍" },
   ],
@@ -70,7 +78,11 @@ const Navbar = () => {
             ? "Panel del director"
             : usuario?.rol === "admision"
               ? "Panel de admisión"
-              : "Panel de coordinador"}
+              : usuario?.rol === "marketing" || usuario?.rol === "comercial"
+                ? "Panel de campañas"
+                : usuario?.rol === "archivos"
+                  ? "Panel de archivos"
+                  : "Panel de coordinador"}
         </div>
       </div>
 

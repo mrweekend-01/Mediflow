@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(PGPASSWORD='Sistem@s.2026' psql -U postgres -d mediflow_db -c \"SELECT id, nombre, ruc, direccion FROM clinicas;\")",
+      "Bash(where psql:*)",
+      "Read(//c/Program Files/PostgreSQL/**)",
+      "Read(//c/Program Files/PostgreSQL//**)",
+      "Bash(python -c ':*)",
+      "Bash(venv/Scripts/python -c ':*)",
+      "Bash(ls D:/Proyectos/MediFlow/frontend/.env*)",
+      "Bash(python3:*)",
+      "Bash(python -c \"import bcrypt; print\\('marketing:', bcrypt.hashpw\\(b'marketing123', bcrypt.gensalt\\(12\\)\\).decode\\(\\)\\); print\\('comercial:', bcrypt.hashpw\\(b'comercial123', bcrypt.gensalt\\(12\\)\\).decode\\(\\)\\)\")",
+      "Bash(docker exec:*)"
+    ]
+  }
+}
